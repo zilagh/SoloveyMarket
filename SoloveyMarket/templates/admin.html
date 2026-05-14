@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Диспетчерская</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #eef1f5;
+            margin: 0;
+            padding: 20px;
+            color: #111827;
+        }
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        h1 {
+            margin: 0;
+        }
+
+        .links {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .links a {
+            background: white;
+            padding: 10px 12px;
+            border-radius: 10px;
+            color: #2563eb;
+            text-decoration: none;
+            font-weight: bold;
+            box-shadow: 0 4px 12px rgba(0,0,0,.06);
+        }
+
+        .stats {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 18px;
+        }
+
+        .stat {
+            background: white;
+            padding: 10px 12px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,.06);
+            font-size: 14px;
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(6, minmax(280px, 1fr));
+            gap: 16px;
+            align-items: start;
+            overflow-x: auto;
+        }
+
+        .column {
+            background: #f8fafc;
+            border-radius: 18px;
+            padding: 14px;
+            min-height: 80vh;
+            box-shadow: 0 8px 24px rgba(0,0,0,.06);
+        }
+
+        .column h2 {
+            font-size: 18px;
+            margin: 0 0 14px;
+            padding: 10px;
+            border-radius: 12px;
+            background: white;
+        }
+
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 14px;
+            box-shadow: 0 8px 20px rgba(0,0,0,.07);
+        }
+
+        .status {
+            display: inline-block;
+            padding: 5px 9px;
+            border-radius: 9px;
+            background: #eef2ff;
+            font-weight: bold;
+            font-size: 13px;
+        }
+
+        .muted {
+            color: #666;
+            font-size: 13px;
+        }
+
+        textarea,
+        input[type="text"],
+        select {
+            width: 100%;
+            margin-top: 10px;
+            padding: 9px;
+            border-radius: 10px;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+            font-size: 13px;
+        }
+
+        textarea {
+            min-height: 55px;
+        }
+
+        .actions {
+            margin-top: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 7px;
+        }
+
+        form {
+            margin: 0;
+        }
+
+        button {
+            padding: 8px 10px;
+            border: none;
+            border-radius: 9px;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 13px;
+        }
+
+        .accept { background: #16a34a; }
+        .search { background: #2563eb; }
+        .done { background: #0f766e; }
+        .reject { background: #dc2626; }
+        .cancel { background: #6b7280; }
+        .assign { background: #7c3aed; }
+
+        .responses {
+            margin-top: 14px;
+            padding-top: 10px;
+            border-top: 1px solid #ddd;
+        }
+
+        .response {
+            background: #f7f8fa;
+            padding: 10px;
+            border-radius: 12px;
+            margin-top: 8px;
+            font-size: 14px;
+        }
+
+        a {
+            color: #2563eb;
+        }
+
+        @media (max-width: 1200px) {
+            .board {
+                grid-template-columns: repeat(2, minmax(280px, 1fr));
+            }
+        }
+
+        @media (max-width: 700px) {
+            body {
+                padding: 10px;
+            }
+
+            .board {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="topbar">
+    <h1>Диспетчерская заявок</h1>
+
+    <div class="links">
+        <a href="/">🌐 Клиентская часть</a>
+        <a href="/admin/executors">👷 Исполнители</a>
+        <a href="/admin/ads">📢 Реклама</a>
+        <a href="/admin/locations">📍 Новые населённые пункты</a>
+        <a href="/admin/service-suggestions">💡 Предложения услуг</a>
+    </div>
+</div>
+
+<div class="stats">
+    <div class="stat">Всего заявок: <b>{{ stats.requests_total }}</b></div>
+    <div class="stat">Новые: <b>{{ stats.requests_new }}</b></div>
+    <div class="stat">Ищем: <b>{{ stats.requests_searching }}</b></div>
+    <div class="stat">В работе: <b>{{ stats.requests_in_work }}</b></div>
+    <div class="stat">Ожидает: <b>{{ stats.requests_executor_done }}</b></div>
+    <div class="stat">Споры: <b>{{ stats.requests_dispute }}</b></div>
+    <div class="stat">Выполнено: <b>{{ stats.requests_done }}</b></div>
+    <div class="stat">Исполнители: <b>{{ stats.executors_total }}</b></div>
+    <div class="stat">Идеи услуг: <b>{{ stats.suggestions_new }}</b></div>
+    <div class="stat">Реклама: <b>{{ stats.ads_total }}</b></div>
+</div>
+
+<div class="board">
+    <div class="column">
+        <h2>🆕 Новые</h2>
+        {% for item in requests %}
+            {% set r = item.data %}
+            {% if r.status == "new" or r.status == "accepted" %}
+                {% include "request_card.html" %}
+            {% endif %}
+        {% endfor %}
+    </div>
+
+    <div class="column">
+        <h2>👷 Отправлены</h2>
+        {% for item in requests %}
+            {% set r = item.data %}
+            {% if r.status == "searching_executor" %}
+                {% include "request_card.html" %}
+            {% endif %}
+        {% endfor %}
+    </div>
+
+    <div class="column">
+        <h2>🔧 В работе</h2>
+        {% for item in requests %}
+            {% set r = item.data %}
+            {% if r.status == "in_work" %}
+                {% include "request_card.html" %}
+            {% endif %}
+        {% endfor %}
+    </div>
+
+    <div class="column">
+        <h2>🟡 Ожидает</h2>
+        {% for item in requests %}
+            {% set r = item.data %}
+            {% if r.status == "executor_done" %}
+                {% include "request_card.html" %}
+            {% endif %}
+        {% endfor %}
+    </div>
+
+    <div class="column">
+        <h2>⚠️ Споры</h2>
+        {% for item in requests %}
+            {% set r = item.data %}
+            {% if r.status == "dispute" %}
+                {% include "request_card.html" %}
+            {% endif %}
+        {% endfor %}
+    </div>
+
+    <div class="column">
+        <h2>✅ Завершённые</h2>
+        {% for item in requests %}
+            {% set r = item.data %}
+            {% if r.status == "done" or r.status == "rejected" or r.status == "canceled" %}
+                {% include "request_card.html" %}
+            {% endif %}
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+function copyComment(form, id) {
+    const comment = document.getElementById("comment-" + id);
+
+    if (comment) {
+        form.querySelector('input[name="comment"]').value = comment.value;
+    }
+}
+
+let currentVersion = null;
+
+async function checkUpdates() {
+    try {
+        const response = await fetch("/admin/events-version", {
+            cache: "no-store"
+        });
+
+        if (!response.ok) {
+            return;
+        }
+
+        const data = await response.json();
+
+        if (currentVersion === null) {
+            currentVersion = data.version;
+            return;
+        }
+
+        if (data.version !== currentVersion) {
+            location.reload();
+        }
+    } catch (e) {
+        console.log("update check failed", e);
+    }
+}
+
+setInterval(checkUpdates, 3000);
+checkUpdates();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Исполнители</title>
+    <style>
+        body { font-family: Arial; background:#f4f6f8; padding:20px; color:#111827; }
+        a { display:inline-block; margin-bottom:16px; color:#2563eb; text-decoration:none; font-weight:bold; }
+        .card { background:white; border-radius:16px; padding:18px; margin-bottom:16px; box-shadow:0 8px 20px rgba(0,0,0,.08); }
+        .cat { background:#f7f8fa; border-radius:12px; padding:12px; margin-top:8px; }
+        button { border:none; border-radius:9px; padding:8px 10px; color:white; cursor:pointer; font-weight:bold; }
+        .paid { background:#7c3aed; }
+        .free { background:#16a34a; }
+        .toggle { background:#6b7280; }
+        .badge { display:inline-block; padding:4px 8px; border-radius:8px; background:#eef2ff; font-weight:bold; font-size:13px; }
+        .disabled { background:#fee2e2; }
+        .active { background:#dcfce7; }
+        form { display:inline-block; margin:4px 4px 0 0; }
+    </style>
+</head>
+<body>
+
+<a href="/admin">← Назад в диспетчерскую</a>
+
+<h1>Исполнители</h1>
+
+{% for item in executors %}
+{% set ex = item.executor %}
+<div class="card">
+    <h3>{{ ex.name or ex.tg_id }}</h3>
+
+    <p><b>TG ID:</b> {{ ex.tg_id }}</p>
+    <p><b>Населённый пункт:</b> {{ ex.location_name or "—" }}</p>
+    <p><b>Основная категория:</b> {{ ex.category or "—" }}</p>
+
+    <p>
+        <b>Рейтинг:</b> ⭐ {{ ex.rating }} |
+        <b>Доверие:</b> {{ ex.trust_score }} |
+        <b>Выполнено:</b> {{ ex.completed_count }} |
+        <b>Откликов:</b> {{ ex.response_count }} |
+        <b>Жалоб:</b> {{ ex.complaint_count }}
+    </p>
+
+    <h4>Категории исполнителя</h4>
+
+    {% if item.categories %}
+        {% for cat in item.categories %}
+        <div class="cat {% if cat.is_active %}active{% else %}disabled{% endif %}">
+            <p>
+                <b>{{ cat.category }}</b>
+
+                {% if cat.is_paid %}
+                    <span class="badge">💳 платная</span>
+                {% else %}
+                    <span class="badge">🆓 бесплатная</span>
+                {% endif %}
+
+                {% if cat.is_active %}
+                    <span class="badge">активна</span>
+                {% else %}
+                    <span class="badge">отключена</span>
+                {% endif %}
+            </p>
+
+            <form method="post" action="/admin/executor/{{ ex.tg_id }}/category/{{ cat.id }}/toggle">
+                <button class="toggle" type="submit">
+                    {% if cat.is_active %}Отключить{% else %}Включить{% endif %}
+                </button>
+            </form>
+
+            <form method="post" action="/admin/executor-category/{{ cat.id }}/paid">
+                <button class="paid" type="submit">Сделать платной</button>
+            </form>
+
+            <form method="post" action="/admin/executor-category/{{ cat.id }}/free">
+                <button class="free" type="submit">Сделать бесплатной</button>
+            </form>
+        </div>
+        {% endfor %}
+    {% else %}
+        <p>Категории не выбраны.</p>
+    {% endif %}
+</div>
+{% endfor %}
+
+</body>
+</html>

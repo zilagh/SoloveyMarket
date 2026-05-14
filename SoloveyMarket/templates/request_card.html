@@ -1,0 +1,72 @@
+<div class="card">
+    <h3>Заявка №{{ r.id }}</h3>
+    <p><b>Категория:</b> {{ r.category }}</p>
+    <p><b>Подкатегория:</b> {{ r.subcategory or "—" }}</p>
+    <p><b>Описание:</b><br>{{ r.description }}</p>
+    <p><b>Ориентир:</b> {{ r.public_location }}</p>
+    <p><b>Точный адрес:</b> {{ r.private_address }}</p>
+    <p><b>Телефон:</b> <a href="tel:{{ r.phone }}">{{ r.phone }}</a></p>
+    <p><b>Статус:</b> <span class="status">{{ r.status }}</span></p>
+    <p><b>Исполнитель:</b> {{ r.executor_id or "не назначен" }}</p>
+    {% if r.dispatcher_comment %}<p><b>Комментарий:</b> {{ r.dispatcher_comment }}</p>{% endif %}
+    {% if r.assignment_reason %}<p><b>Причина назначения:</b> {{ r.assignment_reason }}</p>{% endif %}
+    <p class="muted">Создана: {{ r.created_at }}</p>
+
+    <textarea id="comment-{{ r.id }}" placeholder="Комментарий диспетчера..."></textarea>
+
+    <div class="actions">
+        {% if r.status == "executor_done" %}
+            <form method="post" action="/admin/request/{{ r.id }}/confirm-done"><button class="done" type="submit">✅ Подтвердить</button></form>
+            <form method="post" action="/admin/request/{{ r.id }}/dispute"><input type="text" name="reason" placeholder="Причина спора" required><button class="reject" type="submit">⚠️ Спор</button></form>
+        {% endif %}
+
+        {% if r.status == "dispute" %}
+            <form method="post" action="/admin/request/{{ r.id }}/resolve-dispute">
+                <select name="decision" required>
+                    <option value="">Решение по спору</option>
+                    <option value="client_right">Клиент прав</option>
+                    <option value="executor_right">Исполнитель прав</option>
+                    <option value="compromise_done">Компромисс, закрыть выполненной</option>
+                </select>
+                <input type="text" name="comment" placeholder="Комментарий">
+                <button class="done" type="submit">✅ Закрыть спор</button>
+            </form>
+        {% endif %}
+
+        <form method="post" action="/admin/request/{{ r.id }}/status" onsubmit="copyComment(this, {{ r.id }})"><input type="hidden" name="status" value="accepted"><input type="hidden" name="comment"><button class="accept" type="submit">✅ Принять</button></form>
+        <form method="post" action="/admin/request/{{ r.id }}/status" onsubmit="copyComment(this, {{ r.id }})"><input type="hidden" name="status" value="searching_executor"><input type="hidden" name="comment"><button class="search" type="submit">👷 Искать</button></form>
+        <form method="post" action="/admin/request/{{ r.id }}/status" onsubmit="copyComment(this, {{ r.id }})"><input type="hidden" name="status" value="done"><input type="hidden" name="comment"><button class="done" type="submit">✅ Завершить вручную</button></form>
+        <form method="post" action="/admin/request/{{ r.id }}/status" onsubmit="copyComment(this, {{ r.id }})"><input type="hidden" name="status" value="rejected"><input type="hidden" name="comment"><button class="reject" type="submit">❌ Отклонить</button></form>
+        <form method="post" action="/admin/request/{{ r.id }}/status" onsubmit="copyComment(this, {{ r.id }})"><input type="hidden" name="status" value="canceled"><input type="hidden" name="comment"><button class="cancel" type="submit">🚫 Отменить</button></form>
+    </div>
+
+    <div class="responses">
+        <b>Отклики</b>
+        {% if item.responses %}
+            {% for resp in item.responses %}
+                <div class="response">
+                    <p><b>Исполнитель:</b> {{ resp.name or resp.executor_id }}</p>
+                    <p><b>TG ID:</b> {{ resp.executor_id }}</p>
+                    <p><b>Основная категория:</b> {{ resp.category }}</p>
+                    <p><b>Населённый пункт:</b> {{ resp.location_name or "—" }}</p>
+                    <p><b>Рейтинг:</b> ⭐ {{ resp.rating }}</p>
+                    <p><b>Доверие:</b> {{ resp.trust_score }}</p>
+                    <p><b>Выполнено:</b> {{ resp.completed_count }}</p>
+                    <p><b>Откликов:</b> {{ resp.response_count }}</p>
+                    <p><b>Отмен:</b> {{ resp.cancel_count }}</p>
+                    <p><b>Жалоб:</b> {{ resp.complaint_count }}</p>
+                    <p><b>Статус:</b> {{ resp.status }}</p>
+
+                    {% if r.status != "in_work" and r.status != "done" and r.status != "executor_done" and r.status != "dispute" and resp.status == "new" %}
+                        <form method="post" action="/admin/request/{{ r.id }}/assign/{{ resp.executor_id }}">
+                            <input type="text" name="reason" placeholder="Причина назначения" required>
+                            <button class="assign" type="submit">👷 Назначить</button>
+                        </form>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        {% else %}
+            <p class="muted">Пока нет откликов.</p>
+        {% endif %}
+    </div>
+</div>

@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Реклама</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            padding: 20px;
+            color: #111827;
+        }
+
+        a {
+            display: inline-block;
+            margin-bottom: 16px;
+            color: #2563eb;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 420px 1fr;
+            gap: 18px;
+            align-items: start;
+        }
+
+        .card {
+            background: white;
+            border-radius: 18px;
+            padding: 20px;
+            box-shadow: 0 8px 20px rgba(0,0,0,.08);
+        }
+
+        label {
+            display: block;
+            font-weight: bold;
+            margin: 12px 0 6px;
+        }
+
+        input,
+        textarea,
+        select {
+            width: 100%;
+            padding: 11px;
+            border-radius: 12px;
+            border: 1px solid #d1d5db;
+            box-sizing: border-box;
+            font-size: 15px;
+        }
+
+        textarea {
+            min-height: 90px;
+            resize: vertical;
+        }
+
+        button {
+            border: none;
+            border-radius: 10px;
+            padding: 10px 12px;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .create {
+            background: #16a34a;
+            width: 100%;
+        }
+
+        .toggle {
+            background: #6b7280;
+        }
+
+        .delete {
+            background: #dc2626;
+        }
+
+        .ad {
+            border: 1px solid #e5e7eb;
+            border-radius: 16px;
+            padding: 14px;
+            margin-bottom: 12px;
+            background: #fbfbfb;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 8px;
+            background: #eef2ff;
+            font-size: 13px;
+            font-weight: bold;
+            margin-right: 4px;
+        }
+
+        .active {
+            background: #dcfce7;
+        }
+
+        .off {
+            background: #fee2e2;
+        }
+
+        .preview {
+            width: 100%;
+            max-height: 130px;
+            object-fit: cover;
+            border-radius: 14px;
+            margin-top: 8px;
+        }
+
+        form.inline {
+            display: inline-block;
+            margin-right: 4px;
+        }
+
+        @media (max-width: 900px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            body {
+                padding: 12px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<a href="/admin">← Назад в диспетчерскую</a>
+
+<h1>Реклама на клиентской странице</h1>
+
+<div class="grid">
+    <div class="card">
+        <h2>Добавить рекламу</h2>
+
+        <form method="post" action="/admin/ads/create">
+            <label>Заголовок</label>
+            <input name="title" placeholder="Например: Доставка песка и щебня" required>
+
+            <label>Текст</label>
+            <textarea name="text" placeholder="Краткое описание рекламы"></textarea>
+
+            <label>Ссылка на картинку</label>
+            <input name="image_url" placeholder="https://...">
+
+            <label>Ссылка кнопки</label>
+            <input name="link_url" placeholder="https://... или tel:+7...">
+
+            <label>Текст кнопки</label>
+            <input name="button_text" value="Подробнее">
+
+            <label>Расположение</label>
+            <select name="placement">
+                <option value="home_top">Верх страницы</option>
+                <option value="home_bottom">Низ страницы</option>
+            </select>
+
+            <label>Сортировка</label>
+            <input type="number" name="sort_order" value="100">
+
+            <label>Статус</label>
+            <select name="is_active">
+                <option value="1">Активна</option>
+                <option value="0">Выключена</option>
+            </select>
+
+            <button class="create" type="submit">Добавить рекламу</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <h2>Текущая реклама</h2>
+
+        {% if ads %}
+            {% for ad in ads %}
+                <div class="ad">
+                    <h3>{{ ad.title }}</h3>
+
+                    <p>{{ ad.text }}</p>
+
+                    {% if ad.image_url %}
+                        <img class="preview" src="{{ ad.image_url }}" alt="{{ ad.title }}">
+                    {% endif %}
+
+                    <p>
+                        <span class="badge {% if ad.is_active %}active{% else %}off{% endif %}">
+                            {% if ad.is_active %}активна{% else %}выключена{% endif %}
+                        </span>
+
+                        <span class="badge">{{ ad.placement }}</span>
+
+                        <span class="badge">сортировка: {{ ad.sort_order }}</span>
+                    </p>
+
+                    {% if ad.link_url %}
+                        <p><b>Ссылка:</b> {{ ad.link_url }}</p>
+                    {% endif %}
+
+                    <form class="inline" method="post" action="/admin/ads/{{ ad.id }}/toggle">
+                        <button class="toggle" type="submit">
+                            {% if ad.is_active %}Выключить{% else %}Включить{% endif %}
+                        </button>
+                    </form>
+
+                    <form class="inline" method="post" action="/admin/ads/{{ ad.id }}/delete">
+                        <button class="delete" type="submit">Удалить</button>
+                    </form>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>Рекламы пока нет.</p>
+        {% endif %}
+    </div>
+</div>
+
+</body>
+</html>
