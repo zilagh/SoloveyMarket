@@ -8,13 +8,37 @@
         :root{--bg:#f4f7f2;--card:#fff;--text:#172018;--muted:#667064;--green:#1f8f4d;--green-dark:#166d3a;--light-green:#e9f7ee;--orange:#ff8a3d;--border:#dfe8dc;--shadow:0 18px 45px rgba(30,60,35,.10)}
         *{box-sizing:border-box} body{margin:0;font-family:Arial,sans-serif;color:var(--text);background:radial-gradient(circle at top left,#dff5e7 0,transparent 34%),linear-gradient(180deg,#f8fbf6 0%,var(--bg) 100%)} a{color:inherit}.page{width:min(1180px,calc(100% - 28px));margin:0 auto}.header{padding:18px 0;display:flex;align-items:center;justify-content:space-between;gap:14px}.brand{display:flex;align-items:center;gap:12px;font-weight:900;font-size:22px}.logo{width:46px;height:46px;border-radius:16px;background:linear-gradient(135deg,var(--green),#7bc96f);color:#fff;display:grid;place-items:center;box-shadow:0 12px 28px rgba(31,143,77,.25);font-size:24px}.header-note{color:var(--muted);font-size:14px;text-align:right}.hero{display:grid;grid-template-columns:1.05fr .95fr;gap:24px;align-items:stretch;padding:18px 0 26px}.hero-card{background:linear-gradient(145deg,#fff,#eef9f0);border:1px solid rgba(31,143,77,.12);border-radius:34px;padding:34px;box-shadow:var(--shadow);position:relative;overflow:hidden}.hero-card:after{content:"";position:absolute;width:240px;height:240px;border-radius:50%;background:rgba(255,232,163,.55);right:-70px;top:-80px}.tag{display:inline-flex;gap:8px;align-items:center;background:var(--light-green);color:var(--green-dark);padding:9px 12px;border-radius:999px;font-weight:700;font-size:14px;margin-bottom:18px}h1{font-size:clamp(34px,5vw,58px);line-height:.98;margin:0 0 18px;letter-spacing:-1.5px;max-width:680px;position:relative;z-index:1}.hero-text{font-size:18px;line-height:1.55;color:#3d493f;max-width:620px;position:relative;z-index:1}.hero-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:24px;position:relative;z-index:1}.btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 18px;border-radius:16px;text-decoration:none;font-weight:800;border:0;cursor:pointer}.btn-primary{background:var(--green);color:#fff;box-shadow:0 14px 25px rgba(31,143,77,.24)}.btn-soft{background:#fff;color:var(--green-dark);border:1px solid var(--border)}.quick-services{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}.service-tile{background:var(--card);border:1px solid var(--border);border-radius:24px;padding:20px;box-shadow:0 10px 25px rgba(20,40,20,.06)}.service-icon{font-size:30px;margin-bottom:10px}.service-title{font-weight:900;margin-bottom:6px}.service-desc{color:var(--muted);font-size:14px;line-height:1.35}.ads{display:grid;gap:14px;margin:4px 0 24px}.ad-card{display:grid;grid-template-columns:120px 1fr auto;gap:16px;align-items:center;background:#fff9e9;border:1px solid #ffe0a8;border-radius:24px;padding:14px;box-shadow:0 10px 25px rgba(120,80,20,.08)}.ad-img{width:120px;height:82px;border-radius:18px;object-fit:cover;background:linear-gradient(135deg,#ffd36a,#ff8a3d)}.ad-placeholder{width:120px;height:82px;border-radius:18px;background:linear-gradient(135deg,#ffd36a,#ff8a3d);display:grid;place-items:center;font-size:28px}.ad-title{font-weight:900;font-size:18px;margin-bottom:5px}.ad-text{color:#6a4a20;line-height:1.35}.ad-link{background:var(--orange);color:#fff;padding:11px 14px;border-radius:14px;text-decoration:none;font-weight:800;white-space:nowrap}.section-title{font-size:30px;margin:24px 0 12px;letter-spacing:-.5px}.main-grid{display:grid;grid-template-columns:1fr 380px;gap:22px;align-items:start}.form-card,.info-card{background:var(--card);border:1px solid var(--border);border-radius:30px;padding:26px;box-shadow:var(--shadow)}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}label{display:block;font-weight:800;margin:14px 0 7px}input,textarea,select{width:100%;border:1px solid #d7e0d3;background:#fbfdfb;padding:14px;border-radius:16px;font-size:16px;outline:none}input:focus,textarea:focus,select:focus{border-color:var(--green);box-shadow:0 0 0 4px rgba(31,143,77,.10)}textarea{resize:vertical;min-height:120px}.hint{color:var(--muted);font-size:13px;margin-top:6px}.submit{width:100%;margin-top:20px;min-height:56px;border-radius:18px;background:var(--green);color:#fff;font-weight:900;border:0;cursor:pointer;font-size:17px;box-shadow:0 14px 25px rgba(31,143,77,.24)}.info-list{display:grid;gap:14px}.info-item{display:flex;gap:12px;align-items:flex-start;padding:14px;background:#f8fbf6;border-radius:18px;border:1px solid var(--border)}.info-item b{display:block;margin-bottom:4px}.info-item span{color:var(--muted);font-size:14px;line-height:1.35}.bottom-note{margin:26px 0;padding:22px;border-radius:24px;background:#172018;color:#fff;display:flex;justify-content:space-between;gap:18px;align-items:center}.bottom-note p{margin:6px 0 0;color:rgba(255,255,255,.75)}
         @media(max-width:940px){.hero,.main-grid{grid-template-columns:1fr}.quick-services{grid-template-columns:repeat(4,1fr)}.ad-card{grid-template-columns:90px 1fr}.ad-link{grid-column:1/-1;text-align:center}.ad-img,.ad-placeholder{width:90px;height:76px}}
-        @media(max-width:640px){.page{width:min(100% - 20px,1180px)}.header{align-items:flex-start}.brand{font-size:19px}.header-note{display:none}.hero-card,.form-card,.info-card{border-radius:24px;padding:22px}.quick-services{grid-template-columns:1fr 1fr}.service-tile{padding:15px;border-radius:20px}.form-grid{grid-template-columns:1fr;gap:0}.main-grid{gap:14px}.section-title{font-size:24px}.bottom-note{display:block}.ad-card{grid-template-columns:1fr}.ad-img,.ad-placeholder{width:100%;height:130px}}
+        @media(max-width:640px){.page{width:min(100% - 20px,1180px)}.header{align-items:flex-start}.brand{font-size:19px}.header-note{display:none}.hero-card,.form-card,.info-card{border-radius:24px;padding:22px}.quick-services{grid-template-columns:1fr 1fr}
+        .service-tile{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:24px;
+    padding:20px;
+    box-shadow:0 10px 25px rgba(20,40,20,.06);
+    cursor:pointer;
+    text-decoration:none;
+    color:inherit;
+    display:block;
+    transition:.18s ease;
+}
+
+.service-tile:hover{
+    transform:translateY(-3px);
+    border-color:var(--green);
+    box-shadow:0 16px 32px rgba(31,143,77,.14);
+}
     </style>
 </head>
 <body>
 <div class="page">
     <header class="header">
-        <div class="brand"><div class="logo">🏡</div><div><div>Всё_pro_доМ</div><div style="font-size:13px;color:#667064;font-weight:700;">Портал услуг для загородной жизни</div></div></div>
+        <div class="brand">
+            <div class="logo">🏡</div>
+            <div>
+                <div>Всё_pro_доМ</div>
+                <div style="font-size:13px;color:#667064;font-weight:700;">Портал услуг для загородной жизни</div>
+            </div>
+        </div>
         <div class="header-note">Соловей Ключ и соседние посёлки<br>заявки, мастера, доставка, помощь</div>
     </header>
 
@@ -22,9 +46,15 @@
     <section class="ads">
         {% for ad in ads_top %}
         <div class="ad-card">
-            {% if ad.image_url %}<img class="ad-img" src="{{ ad.image_url }}" alt="{{ ad.title }}">{% else %}<div class="ad-placeholder">📢</div>{% endif %}
-            <div><div class="ad-title">{{ ad.title }}</div><div class="ad-text">{{ ad.text }}</div></div>
-            {% if ad.link_url %}<a class="ad-link" href="{{ ad.link_url }}" target="_blank">{{ ad.button_text or "Подробнее" }}</a>{% endif %}
+            {% if ad.image_url %}<img class="ad-img" src="{{ ad.image_url }}" alt="{{ ad.title }}">{% else %}
+            <div class="ad-placeholder">📢</div>
+            {% endif %}
+            <div>
+                <div class="ad-title">{{ ad.title }}</div>
+                <div class="ad-text">{{ ad.text }}</div>
+            </div>
+            {% if ad.link_url %}<a class="ad-link" href="{{ ad.link_url }}" target="_blank">{{ ad.button_text or
+            "Подробнее" }}</a>{% endif %}
         </div>
         {% endfor %}
     </section>
@@ -34,15 +64,37 @@
         <div class="hero-card">
             <div class="tag">🌿 услуги рядом с домом</div>
             <h1>Найдём надежного застройщика, мастера, доставку или помощь для загородной жизни</h1>
-            <div class="hero-text">Оставьте заявку — диспетчер уточнит детали и передаст её подходящим исполнителям рядом с вами. Точный адрес и телефон видит только назначенный исполнитель.</div>
-            <div class="hero-actions"><a class="btn btn-primary" href="#request-form">Оставить заявку</a><a class="btn btn-soft" href="#how">Как работает</a></div>
+            <div class="hero-text">Оставьте заявку — диспетчер уточнит детали и передаст её подходящим исполнителям
+                рядом с вами. Точный адрес и телефон видит только назначенный исполнитель.
+            </div>
+            <div class="hero-actions"><a class="btn btn-primary" href="#request-form">Оставить заявку</a><a
+                    class="btn btn-soft" href="#how">Как работает</a></div>
         </div>
         <div class="quick-services">
-            <div class="service-tile"><div class="service-icon">🚚</div><div class="service-title">Доставка</div><div class="service-desc">стройматериалы, продукты, курьер, груз</div></div>
-            <div class="service-tile"><div class="service-icon">🏗️</div><div class="service-title">Стройка</div><div class="service-desc">скважины, заборы, кровля, фундамент</div></div>
-            <div class="service-tile"><div class="service-icon">🔧</div><div class="service-title">Мастер</div><div class="service-desc">ремонт, сборка, мелкие работы</div></div>
-            <div class="service-tile"><div class="service-icon">⚖️</div><div class="service-title">Документы</div><div class="service-desc">земля, юристы, кадастровые вопросы</div></div>
-        </div>
+    <a class="service-tile" href="#request-form" onclick="selectCategoryFromTile('Грузоперевозки и доставка')">
+        <div class="service-icon">🚚</div>
+        <div class="service-title">Доставка</div>
+        <div class="service-desc">стройматериалы, продукты, курьер, груз</div>
+    </a>
+
+    <a class="service-tile" href="#request-form" onclick="selectCategoryFromTile('Строительство и ремонт')">
+        <div class="service-icon">🏗️</div>
+        <div class="service-title">Стройка</div>
+        <div class="service-desc">скважины, заборы, кровля, фундамент</div>
+    </a>
+
+    <a class="service-tile" href="#request-form" onclick="selectCategoryFromTile('Документы и право')">
+        <div class="service-icon">⚖️</div>
+        <div class="service-title">Документы</div>
+        <div class="service-desc">земля, юристы, кадастровые вопросы</div>
+    </a>
+
+    <a class="service-tile" href="#request-form" onclick="selectCategoryFromTile('Разнорабочие и помощники')">
+        <div class="service-icon">👷</div>
+        <div class="service-title">Разнорабочие</div>
+        <div class="service-desc">помощь на стройке, разгрузка, участок</div>
+    </a>
+</div>
     </section>
 
     <h2 class="section-title" id="request-form">Создать заявку</h2>
@@ -50,26 +102,67 @@
         <form class="form-card" method="post" action="/request" id="requestForm">
             <label>Категория услуги</label>
             <select name="category" id="category" required onchange="updateSubcategories()">
+
                 <option value="">Выберите категорию</option>
-                <option value="Доставка">🚚 Доставка</option><option value="Строительство">🏗️ Строительство</option><option value="Ремонт и мастер">🔧 Ремонт и мастер на час</option><option value="Сантехника">🚿 Сантехника</option><option value="Электрика">💡 Электрика</option><option value="Земельные вопросы">🌍 Земельные вопросы</option><option value="Юридические услуги">⚖️ Юридические услуги</option><option value="Уборка">🧹 Уборка</option><option value="Спецтехника">🚜 Спецтехника</option><option value="Предложить услугу">💡 Предложить услугу</option><option value="Другое">📌 Другое</option>
+                {% for item in service_categories %}
+                {% set c = item.category %}
+                <option value="{{ c.name }}">{{ c.emoji }} {{ c.name }}</option>
+                {% endfor %}
+                <option value="Предложить услугу">💡 Предложить услугу</option>
+                <option value="Другое">📌 Другое</option>
             </select>
-            <label>Что именно нужно?</label><select name="subcategory" id="subcategory" required><option value="">Сначала выберите категорию</option></select>
-            <label>Описание задачи</label><textarea name="description" placeholder="Например: нужно привезти доски из магазина, собрать шкаф, вызвать электрика..." required></textarea>
+            <label>Что именно нужно?</label><select name="subcategory" id="subcategory" required>
+            <option value="">Сначала выберите категорию</option>
+        </select>
+            <label>Описание задачи</label><textarea name="description"
+                                                    placeholder="Например: нужно привезти доски из магазина, собрать шкаф, вызвать электрика..."
+                                                    required></textarea>
             <div class="form-grid">
-                <div><label>Населённый пункт / ориентир</label><select name="public_location" required><option value="">Выберите населённый пункт</option>{% for loc in locations %}<option value="{{ loc.name }}">{{ loc.name }}</option>{% endfor %}</select><div class="hint">Это увидят исполнители до назначения.</div></div>
-                <div><label>Желаемый срок</label><select name="deadline"><option value="Не срочно">Не срочно</option><option value="Сегодня">Сегодня</option><option value="Завтра">Завтра</option><option value="В течение недели">В течение недели</option><option value="Нужно обсудить">Нужно обсудить</option></select></div>
+                <div><label>Населённый пункт / ориентир</label><select name="public_location" required>
+                    <option value="">Выберите населённый пункт</option>
+                    {% for loc in locations %}
+                    <option value="{{ loc.name }}">{{ loc.name }}</option>
+                    {% endfor %}</select>
+                    <div class="hint">Это увидят исполнители до назначения.</div>
+                </div>
+                <div><label>Желаемый срок</label><select name="deadline">
+                    <option value="Не срочно">Не срочно</option>
+                    <option value="Сегодня">Сегодня</option>
+                    <option value="Завтра">Завтра</option>
+                    <option value="В течение недели">В течение недели</option>
+                    <option value="Нужно обсудить">Нужно обсудить</option>
+                </select></div>
             </div>
-            <label id="privateAddressLabel">Точный адрес</label><input id="privateAddressInput" name="private_address" placeholder="Улица, дом, участок, подъезд" required><div class="hint" id="privateAddressHint">Точный адрес скрыт до назначения исполнителя.</div>
+            <label id="privateAddressLabel">Точный адрес</label><input id="privateAddressInput" name="private_address"
+                                                                       placeholder="Улица, дом, участок, подъезд"
+                                                                       required>
+            <div class="hint" id="privateAddressHint">Точный адрес скрыт до назначения исполнителя.</div>
             <label>Телефон</label><input name="phone" placeholder="+7 (___) ___-__-__" required>
             <button class="submit" type="submit">Отправить заявку диспетчеру</button>
         </form>
         <aside class="info-card" id="how">
             <h2 style="margin-top:0;">Как это работает</h2>
             <div class="info-list">
-                <div class="info-item"><div>1️⃣</div><div><b>Вы оставляете заявку</b><span>Выбираете категорию, ориентир, срок и описываете задачу.</span></div></div>
-                <div class="info-item"><div>2️⃣</div><div><b>Диспетчер уточняет детали</b><span>Если нужно — связывается с вами и приводит заявку в порядок.</span></div></div>
-                <div class="info-item"><div>3️⃣</div><div><b>Исполнители откликаются</b><span>До назначения они видят только категорию и ориентир, без телефона и адреса.</span></div></div>
-                <div class="info-item"><div>4️⃣</div><div><b>Назначаем подходящего</b><span>Учитываем категорию, район, рейтинг и историю исполнителя.</span></div></div>
+                <div class="info-item">
+                    <div>1️⃣</div>
+                    <div><b>Вы оставляете
+                        заявку</b><span>Выбираете категорию, ориентир, срок и описываете задачу.</span></div>
+                </div>
+                <div class="info-item">
+                    <div>2️⃣</div>
+                    <div><b>Диспетчер уточняет детали</b><span>Если нужно — связывается с вами и приводит заявку в порядок.</span>
+                    </div>
+                </div>
+                <div class="info-item">
+                    <div>3️⃣</div>
+                    <div><b>Исполнители откликаются</b><span>До назначения они видят только категорию и ориентир, без телефона и адреса.</span>
+                    </div>
+                </div>
+                <div class="info-item">
+                    <div>4️⃣</div>
+                    <div><b>Назначаем
+                        подходящего</b><span>Учитываем категорию, район, рейтинг и историю исполнителя.</span></div>
+                </div>
             </div>
         </aside>
     </section>
@@ -78,76 +171,125 @@
     <section class="ads" style="margin-top:24px;">
         {% for ad in ads_bottom %}
         <div class="ad-card">
-            {% if ad.image_url %}<img class="ad-img" src="{{ ad.image_url }}" alt="{{ ad.title }}">{% else %}<div class="ad-placeholder">🌟</div>{% endif %}
-            <div><div class="ad-title">{{ ad.title }}</div><div class="ad-text">{{ ad.text }}</div></div>
-            {% if ad.link_url %}<a class="ad-link" href="{{ ad.link_url }}" target="_blank">{{ ad.button_text or "Подробнее" }}</a>{% endif %}
+            {% if ad.image_url %}<img class="ad-img" src="{{ ad.image_url }}" alt="{{ ad.title }}">{% else %}
+            <div class="ad-placeholder">🌟</div>
+            {% endif %}
+            <div>
+                <div class="ad-title">{{ ad.title }}</div>
+                <div class="ad-text">{{ ad.text }}</div>
+            </div>
+            {% if ad.link_url %}<a class="ad-link" href="{{ ad.link_url }}" target="_blank">{{ ad.button_text or
+            "Подробнее" }}</a>{% endif %}
         </div>
         {% endfor %}
     </section>
     {% endif %}
 
-    <section class="bottom-note"><div><b>Есть услуга, которой нет в списке?</b><p>Выберите категорию “Предложить услугу” — так сервис будет расти под реальные потребности жителей.</p></div><a class="btn btn-primary" href="#request-form" onclick="selectServiceSuggestion(event)">Предложить услугу</a></section>
+    <section class="bottom-note">
+        <div><b>Есть услуга, которой нет в списке?</b>
+            <p>Выберите категорию “Предложить услугу” — так сервис будет расти под реальные потребности жителей.</p>
+        </div>
+        <a class="btn btn-primary" href="#request-form" onclick="selectServiceSuggestion(event)">Предложить услугу</a>
+    </section>
 </div>
 <script>
-const subcategories={"Доставка":["Курьерская доставка","Доставка стройматериалов","Доставка продуктов","Такси / поездка","Грузоперевозка","Вывоз мусора"],"Строительство":["Каркасное строительство","Фундамент","Кровля","Бурение скважин","Забор / ворота","Баня","Отделочные работы"],"Ремонт и мастер":["Мастер на час","Сборка мебели","Ремонт двери / замка","Установка техники","Мелкий бытовой ремонт"],"Сантехника":["Установка смесителя","Установка унитаза","Прочистка засора","Монтаж труб","Водонагреватель","Насос / скважина"],"Электрика":["Розетки / выключатели","Проводка","Автомат / щиток","Освещение","Подключение техники"],"Земельные вопросы":["Межевание","Кадастровые работы","Оформление участка","Границы участка","Разрешения / документы"],"Юридические услуги":["Консультация юриста","Недвижимость","Земельные споры","Наследство","Договоры"],"Уборка":["Уборка дома","Уборка участка","После ремонта","Покос травы"],"Спецтехника":["Экскаватор","Манипулятор","Самосвал","Буровая установка","Трактор"],"Предложить услугу":["Предложение новой услуги","Не нашли нужную услугу","Идея для сервиса","Обратная связь"],"Другое":["Нужно обсудить","Не знаю категорию"]};
-function updateSubcategories(){
-    const c=document.getElementById("category").value;
-    const s=document.getElementById("subcategory");
-    const addressInput=document.getElementById("privateAddressInput");
-    const addressLabel=document.getElementById("privateAddressLabel");
-    const addressHint=document.getElementById("privateAddressHint");
+    const subcategories = {
+        {% for item in service_categories %}
+            "{{ item.category.name }}": [
+                {% for sub in item.subcategories %}
+                    "{{ sub.name }}"{% if not loop.last %},{% endif %}
+                {% endfor %}
+            ]{% if not loop.last %},{% endif %}
+        {% endfor %},
 
-    s.innerHTML="";
+        "Предложить услугу": [
+            "Предложение новой услуги",
+            "Не нашли нужную услугу",
+            "Идея для сервиса",
+            "Обратная связь"
+        ],
 
-    if(!c||!subcategories[c]){
-        s.innerHTML='<option value="">Сначала выберите категорию</option>';
-        return;
+        "Другое": [
+            "Нужно обсудить",
+            "Не знаю категорию"
+        ]
+    };
+
+    function updateSubcategories(){
+        const c=document.getElementById("category").value;
+        const s=document.getElementById("subcategory");
+        const addressInput=document.getElementById("privateAddressInput");
+        const addressLabel=document.getElementById("privateAddressLabel");
+        const addressHint=document.getElementById("privateAddressHint");
+
+        s.innerHTML="";
+
+        if(!c||!subcategories[c]){
+            s.innerHTML='<option value="">Сначала выберите категорию</option>';
+            return;
+        }
+
+        subcategories[c].forEach(function(item){
+            const o=document.createElement("option");
+            o.value=item;
+            o.textContent=item;
+            s.appendChild(o);
+        });
+
+        if(c==="Предложить услугу"){
+            if(addressInput){
+                addressInput.required=false;
+                addressInput.placeholder="Можно не заполнять. Например: Соловей Ключ, район магазина";
+            }
+            if(addressLabel){addressLabel.textContent="Ориентир / где эта услуга нужна";}
+            if(addressHint){addressHint.textContent="Для предложения услуги точный адрес не обязателен.";}
+        } else {
+            if(addressInput){
+                addressInput.required=true;
+                addressInput.placeholder="Улица, дом, участок, подъезд";
+            }
+            if(addressLabel){addressLabel.textContent="Точный адрес";}
+            if(addressHint){addressHint.textContent="Точный адрес скрыт до назначения исполнителя.";}
+        }
     }
 
-    subcategories[c].forEach(function(item){
-        const o=document.createElement("option");
-        o.value=item;
-        o.textContent=item;
-        s.appendChild(o);
-    });
+    function selectServiceSuggestion(event){
+        if(event){event.preventDefault();}
+        const category=document.getElementById("category");
+        const form=document.getElementById("requestForm");
+        const description=document.querySelector('textarea[name="description"]');
 
-    if(c==="Предложить услугу"){
-        if(addressInput){
-            addressInput.required=false;
-            addressInput.placeholder="Можно не заполнять. Например: Соловей Ключ, район магазина";
+        if(category){
+            category.value="Предложить услугу";
+            updateSubcategories();
         }
-        if(addressLabel){addressLabel.textContent="Ориентир / где эта услуга нужна";}
-        if(addressHint){addressHint.textContent="Для предложения услуги точный адрес не обязателен.";}
-    } else {
-        if(addressInput){
-            addressInput.required=true;
-            addressInput.placeholder="Улица, дом, участок, подъезд";
+
+        if(form){
+            form.scrollIntoView({behavior:"smooth", block:"start"});
         }
-        if(addressLabel){addressLabel.textContent="Точный адрес";}
-        if(addressHint){addressHint.textContent="Точный адрес скрыт до назначения исполнителя.";}
+
+        setTimeout(function(){
+            if(description){
+                description.focus();
+            }
+        }, 350);
     }
-}
 
-function selectServiceSuggestion(event){
-    if(event){event.preventDefault();}
-    const category=document.getElementById("category");
-    const form=document.getElementById("requestForm");
-    const description=document.querySelector('textarea[name="description"]');
+    function selectCategoryFromTile(categoryName){
+    const category = document.getElementById("category");
+    const form = document.getElementById("requestForm");
 
     if(category){
-        category.value="Предложить услугу";
+        category.value = categoryName;
         updateSubcategories();
     }
 
     if(form){
-        form.scrollIntoView({behavior:"smooth", block:"start"});
+        form.scrollIntoView({
+            behavior:"smooth",
+            block:"start"
+        });
     }
-
-    setTimeout(function(){
-        if(description){
-            description.focus();
-        }
-    }, 350);
 }
 </script>
 </body>

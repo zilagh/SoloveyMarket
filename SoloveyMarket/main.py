@@ -33,12 +33,23 @@ from db import (
     toggle_executor_category,
     mark_category_paid,
     mark_category_free,
+    toggle_executor_availability,
+    toggle_executor_active,
+    delete_executor_subscription,
     get_events_version,
     get_active_ads,
     get_all_ads,
     create_ad,
     toggle_ad,
     delete_ad,
+
+    seed_default_categories,
+    get_service_categories_with_subcategories,
+    get_all_service_categories_with_subcategories,
+    create_service_category,
+    create_service_subcategory,
+    toggle_service_category,
+    toggle_service_subcategory,
 )
 
 from bot import (
@@ -80,6 +91,7 @@ def admin_auth(credentials: HTTPBasicCredentials = Depends(security)):
 async def lifespan(app: FastAPI):
     init_db()
     seed_default_locations()
+    seed_default_categories()
 
     asyncio.create_task(start_bot())
 
@@ -95,6 +107,7 @@ app = FastAPI(
 @app.get("/")
 async def index(request: Request):
     locations = get_locations()
+    service_categories = get_service_categories_with_subcategories()
     ads_top = get_active_ads("home_top")
     ads_bottom = get_active_ads("home_bottom")
 
@@ -104,7 +117,8 @@ async def index(request: Request):
         {
             "locations": locations,
             "ads_top": ads_top,
-            "ads_bottom": ads_bottom
+            "ads_bottom": ads_bottom,
+            "service_categories": service_categories
         }
     )
 
@@ -340,6 +354,45 @@ async def admin_executors(
     )
 
 
+@app.post("/admin/executor/{executor_id}/availability-toggle")
+async def admin_toggle_executor_availability(
+    executor_id: int,
+    _: str = Depends(admin_auth)
+):
+    toggle_executor_availability(executor_id)
+
+    return RedirectResponse(
+        "/admin/executors",
+        status_code=303
+    )
+
+
+@app.post("/admin/executor/{executor_id}/active-toggle")
+async def admin_toggle_executor_active(
+    executor_id: int,
+    _: str = Depends(admin_auth)
+):
+    toggle_executor_active(executor_id)
+
+    return RedirectResponse(
+        "/admin/executors",
+        status_code=303
+    )
+
+
+@app.post("/admin/executor-subscription/{subscription_id}/delete")
+async def admin_delete_executor_subscription(
+    subscription_id: int,
+    _: str = Depends(admin_auth)
+):
+    delete_executor_subscription(subscription_id)
+
+    return RedirectResponse(
+        "/admin/executors",
+        status_code=303
+    )
+
+
 @app.post("/admin/executor/{executor_id}/category/{category_id}/toggle")
 async def admin_toggle_executor_category(
     executor_id: int,
@@ -515,6 +568,86 @@ async def admin_update_service_suggestion(
 
     return RedirectResponse(
         "/admin/service-suggestions",
+        status_code=303
+    )
+
+
+@app.get("/admin/categories")
+async def admin_categories(
+    request: Request,
+    _: str = Depends(admin_auth)
+):
+    categories = get_all_service_categories_with_subcategories()
+
+    return templates.TemplateResponse(
+        request,
+        "categories.html",
+        {
+            "categories": categories
+        }
+    )
+
+
+@app.post("/admin/categories/create")
+async def admin_create_category(
+    name: str = Form(...),
+    emoji: str = Form("📌"),
+    sort_order: int = Form(100),
+    _: str = Depends(admin_auth)
+):
+    create_service_category(
+        name=name,
+        emoji=emoji,
+        sort_order=sort_order
+    )
+
+    return RedirectResponse(
+        "/admin/categories",
+        status_code=303
+    )
+
+
+@app.post("/admin/categories/{category_id}/toggle")
+async def admin_toggle_category(
+    category_id: int,
+    _: str = Depends(admin_auth)
+):
+    toggle_service_category(category_id)
+
+    return RedirectResponse(
+        "/admin/categories",
+        status_code=303
+    )
+
+
+@app.post("/admin/categories/{category_id}/subcategories/create")
+async def admin_create_subcategory(
+    category_id: int,
+    name: str = Form(...),
+    sort_order: int = Form(100),
+    _: str = Depends(admin_auth)
+):
+    create_service_subcategory(
+        category_id=category_id,
+        name=name,
+        sort_order=sort_order
+    )
+
+    return RedirectResponse(
+        "/admin/categories",
+        status_code=303
+    )
+
+
+@app.post("/admin/subcategories/{subcategory_id}/toggle")
+async def admin_toggle_subcategory_route(
+    subcategory_id: int,
+    _: str = Depends(admin_auth)
+):
+    toggle_service_subcategory(subcategory_id)
+
+    return RedirectResponse(
+        "/admin/categories",
         status_code=303
     )
 

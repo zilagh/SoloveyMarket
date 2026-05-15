@@ -3,85 +3,298 @@
 <head>
     <meta charset="UTF-8">
     <title>Исполнители</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <style>
-        body { font-family: Arial; background:#f4f6f8; padding:20px; color:#111827; }
-        a { display:inline-block; margin-bottom:16px; color:#2563eb; text-decoration:none; font-weight:bold; }
-        .card { background:white; border-radius:16px; padding:18px; margin-bottom:16px; box-shadow:0 8px 20px rgba(0,0,0,.08); }
-        .cat { background:#f7f8fa; border-radius:12px; padding:12px; margin-top:8px; }
-        button { border:none; border-radius:9px; padding:8px 10px; color:white; cursor:pointer; font-weight:bold; }
-        .paid { background:#7c3aed; }
-        .free { background:#16a34a; }
-        .toggle { background:#6b7280; }
-        .badge { display:inline-block; padding:4px 8px; border-radius:8px; background:#eef2ff; font-weight:bold; font-size:13px; }
-        .disabled { background:#fee2e2; }
-        .active { background:#dcfce7; }
-        form { display:inline-block; margin:4px 4px 0 0; }
+        body {
+            font-family: Arial, sans-serif;
+            background: #eef1f5;
+            margin: 0;
+            padding: 20px;
+            color: #111827;
+        }
+
+        a {
+            color: #2563eb;
+            font-weight: bold;
+            text-decoration: none;
+        }
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+
+        .executor {
+            background: white;
+            border-radius: 18px;
+            padding: 18px;
+            margin-bottom: 16px;
+            box-shadow: 0 8px 20px rgba(0,0,0,.07);
+        }
+
+        .executor-head {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 14px;
+            align-items: start;
+        }
+
+        .badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 10px 0;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 5px 9px;
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        .active {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .off {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .paid {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .free {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .muted {
+            color: #6b7280;
+            font-size: 13px;
+        }
+
+        .stats {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+
+        .stat {
+            background: #f8fafc;
+            border-radius: 10px;
+            padding: 7px 9px;
+            font-size: 13px;
+        }
+
+        .subscriptions {
+            margin-top: 14px;
+            display: grid;
+            gap: 8px;
+        }
+
+        .sub {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 10px;
+            align-items: center;
+            background: #f8fafc;
+            border: 1px solid #e5e7eb;
+            border-radius: 14px;
+            padding: 10px;
+        }
+
+        .sub-title {
+            font-weight: bold;
+        }
+
+        .actions {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        form {
+            margin: 0;
+        }
+
+        button {
+            border: none;
+            border-radius: 9px;
+            color: white;
+            padding: 8px 10px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 13px;
+        }
+
+        .green { background: #16a34a; }
+        .gray { background: #6b7280; }
+        .red { background: #dc2626; }
+        .blue { background: #2563eb; }
+        .purple { background: #7c3aed; }
+
+        .toolbar {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        @media(max-width: 760px) {
+            body {
+                padding: 10px;
+            }
+
+            .executor-head,
+            .sub {
+                grid-template-columns: 1fr;
+            }
+
+            .actions,
+            .toolbar {
+                justify-content: flex-start;
+            }
+        }
     </style>
 </head>
+
 <body>
 
-<a href="/admin">← Назад в диспетчерскую</a>
+<div class="topbar">
+    <div>
+        <a href="/admin">← Назад в диспетчерскую</a>
+        <h1>👷 Исполнители</h1>
+    </div>
 
-<h1>Исполнители</h1>
-
-{% for item in executors %}
-{% set ex = item.executor %}
-<div class="card">
-    <h3>{{ ex.name or ex.tg_id }}</h3>
-
-    <p><b>TG ID:</b> {{ ex.tg_id }}</p>
-    <p><b>Населённый пункт:</b> {{ ex.location_name or "—" }}</p>
-    <p><b>Основная категория:</b> {{ ex.category or "—" }}</p>
-
-    <p>
-        <b>Рейтинг:</b> ⭐ {{ ex.rating }} |
-        <b>Доверие:</b> {{ ex.trust_score }} |
-        <b>Выполнено:</b> {{ ex.completed_count }} |
-        <b>Откликов:</b> {{ ex.response_count }} |
-        <b>Жалоб:</b> {{ ex.complaint_count }}
-    </p>
-
-    <h4>Категории исполнителя</h4>
-
-    {% if item.categories %}
-        {% for cat in item.categories %}
-        <div class="cat {% if cat.is_active %}active{% else %}disabled{% endif %}">
-            <p>
-                <b>{{ cat.category }}</b>
-
-                {% if cat.is_paid %}
-                    <span class="badge">💳 платная</span>
-                {% else %}
-                    <span class="badge">🆓 бесплатная</span>
-                {% endif %}
-
-                {% if cat.is_active %}
-                    <span class="badge">активна</span>
-                {% else %}
-                    <span class="badge">отключена</span>
-                {% endif %}
-            </p>
-
-            <form method="post" action="/admin/executor/{{ ex.tg_id }}/category/{{ cat.id }}/toggle">
-                <button class="toggle" type="submit">
-                    {% if cat.is_active %}Отключить{% else %}Включить{% endif %}
-                </button>
-            </form>
-
-            <form method="post" action="/admin/executor-category/{{ cat.id }}/paid">
-                <button class="paid" type="submit">Сделать платной</button>
-            </form>
-
-            <form method="post" action="/admin/executor-category/{{ cat.id }}/free">
-                <button class="free" type="submit">Сделать бесплатной</button>
-            </form>
-        </div>
-        {% endfor %}
-    {% else %}
-        <p>Категории не выбраны.</p>
-    {% endif %}
+    <div>
+        <a href="/admin/categories">🗂 Категории и подкатегории</a>
+    </div>
 </div>
-{% endfor %}
+
+{% if executors %}
+    {% for item in executors %}
+        {% set ex = item.executor %}
+        {% set subs = item.categories %}
+
+        <div class="executor">
+            <div class="executor-head">
+                <div>
+                    <h2 style="margin:0;">
+                        {{ ex.name or "Без имени" }}
+                    </h2>
+
+                    <div class="muted">
+                        TG ID: {{ ex.tg_id }} · 📍 {{ ex.location_name or "не указан" }}
+                    </div>
+
+                    <div class="badges">
+                        <span class="badge {% if ex.is_active %}active{% else %}off{% endif %}">
+                            {% if ex.is_active %}активен{% else %}заблокирован{% endif %}
+                        </span>
+
+                        <span class="badge {% if ex.is_available %}active{% else %}off{% endif %}">
+                            {% if ex.is_available %}принимает заявки{% else %}не принимает{% endif %}
+                        </span>
+                    </div>
+
+                    <div class="stats">
+                        <div class="stat">⭐ Рейтинг: <b>{{ ex.rating }}</b></div>
+                        <div class="stat">✅ Выполнено: <b>{{ ex.completed_count }}</b></div>
+                        <div class="stat">❌ Отмен: <b>{{ ex.cancel_count }}</b></div>
+                        <div class="stat">⚠️ Жалоб: <b>{{ ex.complaint_count }}</b></div>
+                        <div class="stat">💬 Откликов: <b>{{ ex.response_count }}</b></div>
+                        <div class="stat">🤝 Доверие: <b>{{ ex.trust_score }}</b></div>
+                    </div>
+                </div>
+
+                <div class="toolbar">
+                    <form method="post" action="/admin/executor/{{ ex.tg_id }}/availability-toggle">
+                        <button class="{% if ex.is_available %}gray{% else %}green{% endif %}" type="submit">
+                            {% if ex.is_available %}Не принимает{% else %}Принимает{% endif %}
+                        </button>
+                    </form>
+
+                    <form method="post" action="/admin/executor/{{ ex.tg_id }}/active-toggle">
+                        <button class="{% if ex.is_active %}red{% else %}green{% endif %}" type="submit">
+                            {% if ex.is_active %}Заблокировать{% else %}Активировать{% endif %}
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <h3>Подключённые услуги</h3>
+
+            <div class="subscriptions">
+                {% if subs %}
+                    {% for sub in subs %}
+                        <div class="sub">
+                            <div>
+                                <div class="sub-title">
+                                    {{ sub.category_emoji }} {{ sub.category_name }} → {{ sub.subcategory_name }}
+                                </div>
+
+                                <div class="badges">
+                                    <span class="badge {% if sub.is_active %}active{% else %}off{% endif %}">
+                                        {% if sub.is_active %}активна{% else %}выключена{% endif %}
+                                    </span>
+
+                                    <span class="badge {% if sub.is_paid %}paid{% else %}free{% endif %}">
+                                        {% if sub.is_paid %}платная{% else %}бесплатная{% endif %}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="actions">
+                                <form method="post" action="/admin/executor/{{ ex.tg_id }}/category/{{ sub.id }}/toggle">
+                                    <button class="gray" type="submit">
+                                        {% if sub.is_active %}выкл{% else %}вкл{% endif %}
+                                    </button>
+                                </form>
+
+                                {% if sub.is_paid %}
+                                    <form method="post" action="/admin/executor-category/{{ sub.id }}/free">
+                                        <button class="blue" type="submit">
+                                            сделать бесплатной
+                                        </button>
+                                    </form>
+                                {% else %}
+                                    <form method="post" action="/admin/executor-category/{{ sub.id }}/paid">
+                                        <button class="purple" type="submit">
+                                            сделать платной
+                                        </button>
+                                    </form>
+                                {% endif %}
+
+                                <form method="post" action="/admin/executor-subscription/{{ sub.id }}/delete">
+                                    <button class="red" type="submit">
+                                        удалить
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="muted">У исполнителя пока нет выбранных услуг.</p>
+                {% endif %}
+            </div>
+        </div>
+    {% endfor %}
+{% else %}
+    <p>Исполнителей пока нет.</p>
+{% endif %}
 
 </body>
 </html>
