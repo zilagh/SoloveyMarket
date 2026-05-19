@@ -1736,3 +1736,34 @@ def update_service_suggestion_status(suggestion_id, status, admin_comment=""):
 
     conn.commit()
     conn.close()
+
+
+def get_service_categories_with_subcategories():
+    conn = db()
+
+    categories = conn.execute("""
+        SELECT *
+        FROM service_categories
+        WHERE is_active = 1
+        ORDER BY sort_order ASC, name ASC
+    """).fetchall()
+
+    result = []
+
+    for category in categories:
+        subcategories = conn.execute("""
+            SELECT *
+            FROM service_subcategories
+            WHERE category_id = ?
+              AND is_active = 1
+            ORDER BY sort_order ASC, name ASC
+        """, (category["id"],)).fetchall()
+
+        result.append({
+            "category": category,
+            "subcategories": subcategories
+        })
+
+    conn.close()
+
+    return result
