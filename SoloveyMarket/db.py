@@ -57,7 +57,6 @@ def init_db():
         category TEXT,
         location_name TEXT,
         is_active INTEGER DEFAULT 1,
-        is_available INTEGER DEFAULT 1,
         rating REAL DEFAULT 5.0,
         completed_count INTEGER DEFAULT 0,
         cancel_count INTEGER DEFAULT 0,
@@ -180,39 +179,13 @@ def init_db():
         )
         """)
 
-
     cur.execute("""
-    CREATE TABLE IF NOT EXISTS service_categories (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT UNIQUE NOT NULL,
-        emoji TEXT DEFAULT '📌',
-        is_active INTEGER DEFAULT 1,
-        sort_order INTEGER DEFAULT 100,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-    """)
-
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS service_subcategories (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        category_id INTEGER NOT NULL,
-        name TEXT NOT NULL,
-        is_active INTEGER DEFAULT 1,
-        sort_order INTEGER DEFAULT 100,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(category_id, name)
-    )
-    """)
-
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS executor_subscriptions (
+    CREATE TABLE IF NOT EXISTS executor_locations (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         executor_id INTEGER NOT NULL,
-        subcategory_id INTEGER NOT NULL,
-        is_active INTEGER DEFAULT 1,
-        is_paid INTEGER DEFAULT 0,
+        location_name TEXT NOT NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(executor_id, subcategory_id)
+        UNIQUE(executor_id, location_name)
     )
     """)
 
@@ -243,7 +216,6 @@ def init_db():
 
         "ALTER TABLE executors ADD COLUMN location_name TEXT",
         "ALTER TABLE executors ADD COLUMN is_active INTEGER DEFAULT 1",
-        "ALTER TABLE executors ADD COLUMN is_available INTEGER DEFAULT 1",
         "ALTER TABLE executors ADD COLUMN rating REAL DEFAULT 5.0",
         "ALTER TABLE executors ADD COLUMN completed_count INTEGER DEFAULT 0",
         "ALTER TABLE executors ADD COLUMN cancel_count INTEGER DEFAULT 0",
@@ -269,19 +241,6 @@ def init_db():
         "ALTER TABLE service_suggestions ADD COLUMN status TEXT DEFAULT 'new'",
         "ALTER TABLE service_suggestions ADD COLUMN admin_comment TEXT",
         "ALTER TABLE service_suggestions ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP",
-
-        "ALTER TABLE service_categories ADD COLUMN emoji TEXT DEFAULT '📌'",
-        "ALTER TABLE service_categories ADD COLUMN is_active INTEGER DEFAULT 1",
-        "ALTER TABLE service_categories ADD COLUMN sort_order INTEGER DEFAULT 100",
-        "ALTER TABLE service_categories ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP",
-
-        "ALTER TABLE service_subcategories ADD COLUMN is_active INTEGER DEFAULT 1",
-        "ALTER TABLE service_subcategories ADD COLUMN sort_order INTEGER DEFAULT 100",
-        "ALTER TABLE service_subcategories ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP",
-
-        "ALTER TABLE executor_subscriptions ADD COLUMN is_active INTEGER DEFAULT 1",
-        "ALTER TABLE executor_subscriptions ADD COLUMN is_paid INTEGER DEFAULT 0",
-        "ALTER TABLE executor_subscriptions ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP",
 
         "ALTER TABLE ads ADD COLUMN image_url TEXT",
         "ALTER TABLE ads ADD COLUMN link_url TEXT",
@@ -510,7 +469,6 @@ def add_executor(tg_id, name, category, location_name=None):
             category,
             location_name,
             is_active,
-            is_available,
             rating,
             completed_count,
             cancel_count,
@@ -520,7 +478,6 @@ def add_executor(tg_id, name, category, location_name=None):
         )
         VALUES (
             ?, ?, ?, ?, 1,
-            COALESCE((SELECT is_available FROM executors WHERE tg_id = ?), 1),
             COALESCE((SELECT rating FROM executors WHERE tg_id = ?), 5.0),
             COALESCE((SELECT completed_count FROM executors WHERE tg_id = ?), 0),
             COALESCE((SELECT cancel_count FROM executors WHERE tg_id = ?), 0),
@@ -533,7 +490,6 @@ def add_executor(tg_id, name, category, location_name=None):
         name,
         category,
         location_name,
-        tg_id,
         tg_id,
         tg_id,
         tg_id,
@@ -607,27 +563,6 @@ def toggle_executor_category(executor_id, category_id):
 
     row = conn.execute("""
         SELECT *
-        FROM executor_subscriptions
-        WHERE id = ?
-          AND executor_id = ?
-    """, (category_id, executor_id)).fetchone()
-
-    if row:
-        new_status = 0 if row["is_active"] else 1
-
-        conn.execute("""
-            UPDATE executor_subscriptions
-            SET is_active = ?
-            WHERE id = ?
-        """, (new_status, category_id))
-
-        conn.commit()
-        conn.close()
-        return
-
-    # fallback for old legacy executor_categories rows
-    row = conn.execute("""
-        SELECT *
         FROM executor_categories
         WHERE id = ?
           AND executor_id = ?
@@ -649,20 +584,12 @@ def toggle_executor_category(executor_id, category_id):
 def mark_category_paid(category_id):
     conn = db()
 
-    cur = conn.execute("""
-        UPDATE executor_subscriptions
+    conn.execute("""
+        UPDATE executor_categories
         SET is_paid = 1,
             is_active = 1
         WHERE id = ?
     """, (category_id,))
-
-    if cur.rowcount == 0:
-        conn.execute("""
-            UPDATE executor_categories
-            SET is_paid = 1,
-                is_active = 1
-            WHERE id = ?
-        """, (category_id,))
 
     conn.commit()
     conn.close()
@@ -671,20 +598,12 @@ def mark_category_paid(category_id):
 def mark_category_free(category_id):
     conn = db()
 
-    cur = conn.execute("""
-        UPDATE executor_subscriptions
+    conn.execute("""
+        UPDATE executor_categories
         SET is_paid = 0,
             is_active = 1
         WHERE id = ?
     """, (category_id,))
-
-    if cur.rowcount == 0:
-        conn.execute("""
-            UPDATE executor_categories
-            SET is_paid = 0,
-                is_active = 1
-            WHERE id = ?
-        """, (category_id,))
 
     conn.commit()
     conn.close()
@@ -703,6 +622,72 @@ def get_executor(tg_id):
     return row
 
 
+
+def get_executor_profile(executor_id):
+    conn = db()
+
+    executor = conn.execute("""
+        SELECT *
+        FROM executors
+        WHERE tg_id = ?
+    """, (executor_id,)).fetchone()
+
+    if not executor:
+        conn.close()
+        return None
+
+    subscriptions = conn.execute("""
+        SELECT
+            executor_subscriptions.*,
+            service_subcategories.name AS subcategory_name,
+            service_subcategories.requires_dispatcher,
+            service_categories.name AS category_name,
+            service_categories.emoji AS category_emoji
+        FROM executor_subscriptions
+        JOIN service_subcategories
+            ON service_subcategories.id = executor_subscriptions.subcategory_id
+        JOIN service_categories
+            ON service_categories.id = service_subcategories.category_id
+        WHERE executor_subscriptions.executor_id = ?
+          AND executor_subscriptions.is_active = 1
+        ORDER BY
+            service_categories.sort_order ASC,
+            service_subcategories.sort_order ASC,
+            service_subcategories.name ASC
+    """, (executor_id,)).fetchall()
+
+    locations = conn.execute("""
+        SELECT *
+        FROM executor_locations
+        WHERE executor_id = ?
+        ORDER BY location_name ASC
+    """, (executor_id,)).fetchall()
+
+    conn.close()
+
+    return {
+        "executor": executor,
+        "subscriptions": subscriptions,
+        "locations": locations
+    }
+
+
+def set_executor_availability(executor_id, is_available):
+    conn = db()
+
+    conn.execute("""
+        UPDATE executors
+        SET is_available = ?
+        WHERE tg_id = ?
+    """, (
+        1 if is_available else 0,
+        executor_id
+    ))
+
+    conn.commit()
+    conn.close()
+
+
 def get_executors_with_categories():
     conn = db()
 
@@ -716,28 +701,10 @@ def get_executors_with_categories():
 
     for ex in rows:
         cats = conn.execute("""
-            SELECT
-                executor_subscriptions.id,
-                executor_subscriptions.executor_id,
-                executor_subscriptions.subcategory_id,
-                executor_subscriptions.is_paid,
-                executor_subscriptions.is_active,
-                executor_subscriptions.created_at,
-                service_subcategories.name AS subcategory_name,
-                service_categories.name AS category_name,
-                service_categories.emoji AS category_emoji
-            FROM executor_subscriptions
-            JOIN service_subcategories
-                ON service_subcategories.id = executor_subscriptions.subcategory_id
-            JOIN service_categories
-                ON service_categories.id = service_subcategories.category_id
-            WHERE executor_subscriptions.executor_id = ?
-            ORDER BY
-                executor_subscriptions.is_active DESC,
-                executor_subscriptions.is_paid ASC,
-                service_categories.sort_order ASC,
-                service_subcategories.sort_order ASC,
-                service_subcategories.name ASC
+            SELECT *
+            FROM executor_categories
+            WHERE executor_id = ?
+            ORDER BY is_active DESC, is_paid ASC, id ASC
         """, (ex["tg_id"],)).fetchall()
 
         result.append({
@@ -794,6 +761,33 @@ def get_executors_by_category(category, public_location=None):
     conn.close()
     return rows
 
+
+def get_all_service_categories_with_subcategories():
+    conn = db()
+
+    categories = conn.execute("""
+        SELECT *
+        FROM service_categories
+        ORDER BY sort_order ASC, name ASC
+    """).fetchall()
+
+    result = []
+
+    for category in categories:
+        subcategories = conn.execute("""
+            SELECT *
+            FROM service_subcategories
+            WHERE category_id = ?
+            ORDER BY sort_order ASC, name ASC
+        """, (category["id"],)).fetchall()
+
+        result.append({
+            "category": category,
+            "subcategories": subcategories
+        })
+
+    conn.close()
+    return result
 
 def create_response(request_id, executor_id):
     conn = db()
@@ -1309,8 +1303,7 @@ def get_events_version():
             COALESCE((SELECT COUNT(*) FROM executor_categories), 0) AS categories_count,
             COALESCE((SELECT COUNT(*) FROM location_requests), 0) AS location_requests_count,
             COALESCE((SELECT COUNT(*) FROM service_suggestions), 0) AS suggestions_count,
-            COALESCE((SELECT COUNT(*) FROM ads), 0) AS ads_count,
-            COALESCE((SELECT COUNT(*) FROM executor_subscriptions), 0) AS subscriptions_count
+            COALESCE((SELECT COUNT(*) FROM ads), 0) AS ads_count
     """).fetchone()
 
     conn.close()
@@ -1322,9 +1315,8 @@ def get_events_version():
         f"{row['executors_count']}-"
         f"{row['categories_count']}-"
         f"{row['location_requests_count']}-"
-        f"{row['suggestions_count']}-"
-        f"{row['ads_count']}-"
-        f"{row['subscriptions_count']}"
+        f"{row['suggestions_count']}"
+        f"{row['ads_count']}"
     )
 
 
@@ -1350,442 +1342,62 @@ def get_stats():
     conn.close()
     return stats
 
-
-def seed_default_categories():
-    conn = db()
-
-    catalog = [
-        ('Разнорабочие и помощники', '👷', 1, [
-            'Подсобный рабочий',
-            'Разнорабочий на день',
-            'Помощь на стройке',
-            'Разгрузка',
-            'Переезд',
-            'Копка / земляные работы',
-            'Уборка участка',
-            'Вывоз мусора',
-            'Демонтаж',
-            'Бригада рабочих',
-        ]),
-        ('Строительство и ремонт', '🏗', 2, [
-            'Строительство домов',
-            'Каркасные дома',
-            'Фундамент',
-            'Кровля',
-            'Фасадные работы',
-            'Отделка',
-            'Ремонт квартир',
-            'Ремонт домов',
-            'Плиточник',
-            'Маляр',
-            'Штукатур',
-            'Гипсокартон',
-            'Бетонные работы',
-            'Сварка',
-            'Монтаж заборов',
-            'Укладка брусчатки',
-            'Бурение',
-            'Лестницы',
-            'Бани и сауны',
-        ]),
-        ('Электрика', '⚡', 3, [
-            'Электрик',
-            'Замена проводки',
-            'Монтаж щита',
-            'Подключение дома',
-            'Освещение участка',
-            'Установка розеток',
-            'Слаботочка',
-            'Видеонаблюдение',
-            'Домофоны',
-            'Автоматика ворот',
-            'Генераторы',
-            'Солнечные панели',
-        ]),
-        ('Сантехника и отопление', '🚿', 4, [
-            'Сантехник',
-            'Монтаж отопления',
-            'Тёплый пол',
-            'Котлы',
-            'Водоснабжение',
-            'Скважины',
-            'Септики',
-            'Канализация',
-            'Разводка труб',
-            'Установка бойлера',
-            'Прочистка канализации',
-            'Насосное оборудование',
-        ]),
-        ('Участок и благоустройство', '🌿', 5, [
-            'Ландшафтный дизайн',
-            'Покос травы',
-            'Спил деревьев',
-            'Обрезка деревьев',
-            'Укладка газона',
-            'Дренаж',
-            'Автополив',
-            'Уборка снега',
-            'Чистка участка',
-            'Брусчатка',
-            'Озеленение',
-            'Планировка участка',
-        ]),
-        ('Грузоперевозки и доставка', '🚚', 6, [
-            'Курьер',
-            'Доставка воды',
-            'Доставка стройматериалов',
-            'Доставка продуктов',
-            'Грузчики',
-            'Манипулятор',
-            'Эвакуатор',
-            'Самосвал',
-            'Переезды',
-            'Вывоз мусора',
-            'Перевозка мебели',
-            'Межгород',
-        ]),
-        ('Спецтехника', '🚜', 7, [
-            'Экскаватор',
-            'Миниэкскаватор',
-            'Бульдозер',
-            'Автокран',
-            'Манипулятор',
-            'Самосвал',
-            'Ямобур',
-            'Каток',
-            'Погрузчик',
-            'Трактор',
-        ]),
-        ('Дерево и столярка', '🪵', 8, [
-            'Плотник',
-            'Столяр',
-            'Изготовление мебели',
-            'Кухни на заказ',
-            'Лестницы',
-            'Террасы',
-            'Беседки',
-            'Навесы',
-            'Деревянные дома',
-            'Отделка деревом',
-        ]),
-        ('Клининг и уборка', '🧹', 9, [
-            'Уборка домов',
-            'Генеральная уборка',
-            'После ремонта',
-            'Мытьё окон',
-            'Химчистка мебели',
-            'Уборка территории',
-            'Уборка снега',
-            'Дезинфекция',
-            'Уборка офисов',
-        ]),
-        ('Животные и фермерство', '🐕', 10, [
-            'Передержка животных',
-            'Выгул собак',
-            'Ветеринар',
-            'Корма',
-            'Домашняя птица',
-            'Мясо фермерское',
-            'Яйцо домашнее',
-            'Молочная продукция',
-            'Сено',
-            'Комбикорм',
-        ]),
-        ('Еда и продукты', '🍖', 11, [
-            'Домашняя еда',
-            'Выпечка',
-            'Шашлык',
-            'Полуфабрикаты',
-            'Доставка еды',
-            'Кейтеринг',
-            'Торты на заказ',
-            'Овощи',
-            'Мёд',
-            'Морепродукты',
-        ]),
-        ('Автоуслуги', '🚗', 12, [
-            'Автомеханик',
-            'Выездной ремонт',
-            'Шиномонтаж',
-            'Диагностика',
-            'Автоэлектрик',
-            'Покраска авто',
-            'Полировка',
-            'Запчасти',
-            'Эвакуатор',
-            'Подбор авто',
-        ]),
-        ('Техника и IT', '📱', 13, [
-            'Ремонт телефонов',
-            'Ремонт ноутбуков',
-            'Настройка ПК',
-            'Интернет и Wi-Fi',
-            'Видеонаблюдение',
-            'Создание сайтов',
-            'Telegram-боты',
-            'Установка ПО',
-            'Монтаж ТВ',
-            'Умный дом',
-        ]),
-        ('Мебель и интерьер', '🪑', 14, [
-            'Сборка мебели',
-            'Кухни',
-            'Шкафы-купе',
-            'Натяжные потолки',
-            'Жалюзи',
-            'Шторы',
-            'Дизайн интерьера',
-            'Корпусная мебель',
-            'Мягкая мебель',
-        ]),
-        ('Услуги для бизнеса', '📦', 15, [
-            'Бухгалтер',
-            'Юрист',
-            'Реклама',
-            'SMM',
-            'Настройка Авито',
-            'Фото товаров',
-            'Разработка логотипа',
-            'CRM',
-            'Автоматизация',
-            'Маркетинг',
-        ]),
-        ('Обучение и помощь', '🧑\u200d🏫', 16, [
-            'Репетитор',
-            'Английский язык',
-            'Подготовка к школе',
-            'Компьютерная помощь',
-            'Обучение вождению',
-            'Спортивный тренер',
-            'Музыка',
-            'Подготовка к экзаменам',
-        ]),
-        ('Недвижимость', '🏠', 17, [
-            'Продажа домов',
-            'Продажа участков',
-            'Аренда домов',
-            'Посуточно',
-            'Риелтор',
-            'Кадастровые услуги',
-            'Оценка недвижимости',
-            'Ипотека',
-            'Проверка документов',
-        ]),
-        ('Документы и право', '⚖️', 18, [
-            'Юрист',
-            'Земельные вопросы',
-            'Регистрация дома',
-            'Разрешение на строительство',
-            'Оформление участка',
-            'Судебные споры',
-            'Договоры',
-            'Наследство',
-        ]),
-    ]
-
-    for category_name, emoji, category_sort, subcategories in catalog:
-        conn.execute("""
-            INSERT OR IGNORE INTO service_categories(
-                name,
-                emoji,
-                sort_order,
-                is_active
-            )
-            VALUES (?, ?, ?, 1)
-        """, (
-            category_name,
-            emoji,
-            category_sort
-        ))
-
-        category = conn.execute("""
-            SELECT *
-            FROM service_categories
-            WHERE name = ?
-        """, (category_name,)).fetchone()
-
-        if not category:
-            continue
-
-        for sub_sort, sub_name in enumerate(subcategories, start=1):
-            conn.execute("""
-                INSERT OR IGNORE INTO service_subcategories(
-                    category_id,
-                    name,
-                    sort_order,
-                    is_active
-                )
-                VALUES (?, ?, ?, 1)
-            """, (
-                category["id"],
-                sub_name,
-                sub_sort
-            ))
-
-    conn.commit()
-    conn.close()
-
-
-def get_service_categories_with_subcategories():
-    conn = db()
-
-    categories = conn.execute("""
-        SELECT *
-        FROM service_categories
-        WHERE COALESCE(is_active, 1) = 1
-        ORDER BY sort_order ASC, id ASC
-    """).fetchall()
-
-    result = []
-
-    for category in categories:
-        subs = conn.execute("""
-            SELECT *
-            FROM service_subcategories
-            WHERE category_id = ?
-              AND COALESCE(is_active, 1) = 1
-            ORDER BY sort_order ASC, id ASC
-        """, (category["id"],)).fetchall()
-
-        result.append({
-            "category": category,
-            "subcategories": subs
-        })
-
-    conn.close()
-    return result
-
-
-def get_all_service_categories_with_subcategories():
-    conn = db()
-
-    categories = conn.execute("""
-        SELECT *
-        FROM service_categories
-        ORDER BY COALESCE(is_active, 1) DESC, sort_order ASC, id ASC
-    """).fetchall()
-
-    result = []
-
-    for category in categories:
-        subs = conn.execute("""
-            SELECT *
-            FROM service_subcategories
-            WHERE category_id = ?
-            ORDER BY COALESCE(is_active, 1) DESC, sort_order ASC, id ASC
-        """, (category["id"],)).fetchall()
-
-        result.append({
-            "category": category,
-            "subcategories": subs
-        })
-
-    conn.close()
-    return result
-
-
-def create_service_category(name, emoji="📌", sort_order=100):
-    name = name.strip()
-    emoji = emoji.strip() if emoji else "📌"
-
-    if not name:
-        return
-
-    conn = db()
-
-    conn.execute("""
-        INSERT OR IGNORE INTO service_categories(
-            name,
-            emoji,
-            sort_order,
-            is_active
-        )
-        VALUES (?, ?, ?, 1)
-    """, (
-        name,
-        emoji,
-        sort_order
-    ))
-
-    conn.commit()
-    conn.close()
-
-
-def create_service_subcategory(category_id, name, sort_order=100):
-    name = name.strip()
-
-    if not name:
-        return
-
-    conn = db()
-
-    conn.execute("""
-        INSERT OR IGNORE INTO service_subcategories(
-            category_id,
-            name,
-            sort_order,
-            is_active
-        )
-        VALUES (?, ?, ?, 1)
-    """, (
-        category_id,
-        name,
-        sort_order
-    ))
-
-    conn.commit()
-    conn.close()
-
-
-def toggle_service_category(category_id):
+def get_service_subcategory_by_name(name):
     conn = db()
 
     row = conn.execute("""
-        SELECT *
-        FROM service_categories
-        WHERE id = ?
-    """, (category_id,)).fetchone()
-
-    if row:
-        new_status = 0 if row["is_active"] else 1
-
-        conn.execute("""
-            UPDATE service_categories
-            SET is_active = ?
-            WHERE id = ?
-        """, (
-            new_status,
-            category_id
-        ))
-
-    conn.commit()
-    conn.close()
-
-
-def toggle_service_subcategory(subcategory_id):
-    conn = db()
-
-    row = conn.execute("""
-        SELECT *
+        SELECT
+            service_subcategories.*,
+            service_categories.name AS category_name,
+            service_categories.emoji AS category_emoji
         FROM service_subcategories
+        JOIN service_categories
+            ON service_categories.id = service_subcategories.category_id
+        WHERE service_subcategories.name = ?
+        LIMIT 1
+    """, (name,)).fetchone()
+
+    conn.close()
+    return row
+
+
+def set_service_subcategory_requires_dispatcher(subcategory_id, requires_dispatcher):
+    conn = db()
+
+    conn.execute("""
+        UPDATE service_subcategories
+        SET requires_dispatcher = ?
         WHERE id = ?
-    """, (subcategory_id,)).fetchone()
-
-    if row:
-        new_status = 0 if row["is_active"] else 1
-
-        conn.execute("""
-            UPDATE service_subcategories
-            SET is_active = ?
-            WHERE id = ?
-        """, (
-            new_status,
-            subcategory_id
-        ))
+    """, (
+        1 if requires_dispatcher else 0,
+        subcategory_id
+    ))
 
     conn.commit()
     conn.close()
 
+
+def get_service_subcategories_flat():
+    conn = db()
+
+    rows = conn.execute("""
+        SELECT
+            service_subcategories.*,
+            service_categories.name AS category_name,
+            service_categories.emoji AS category_emoji
+        FROM service_subcategories
+        JOIN service_categories
+            ON service_categories.id = service_subcategories.category_id
+        WHERE service_categories.is_active = 1
+          AND service_subcategories.is_active = 1
+        ORDER BY
+            service_categories.sort_order ASC,
+            service_subcategories.sort_order ASC,
+            service_subcategories.name ASC
+    """).fetchall()
+
+    conn.close()
+    return rows
 
 
 def set_executor_subcategories(executor_id, subcategory_ids):
@@ -1797,9 +1409,7 @@ def set_executor_subcategories(executor_id, subcategory_ids):
         WHERE executor_id = ?
     """, (executor_id,))
 
-    for index, subcategory_id in enumerate(subcategory_ids):
-        is_paid = 1 if index >= FREE_CATEGORY_LIMIT else 0
-
+    for subcategory_id in subcategory_ids:
         conn.execute("""
             INSERT INTO executor_subscriptions(
                 executor_id,
@@ -1807,151 +1417,78 @@ def set_executor_subcategories(executor_id, subcategory_ids):
                 is_active,
                 is_paid
             )
-            VALUES (?, ?, 1, ?)
+            VALUES (?, ?, 1, 0)
             ON CONFLICT(executor_id, subcategory_id)
             DO UPDATE SET
                 is_active = 1,
-                is_paid = excluded.is_paid
+                is_paid = 0
         """, (
             executor_id,
-            subcategory_id,
-            is_paid
+            subcategory_id
         ))
 
     conn.commit()
     conn.close()
 
 
-def toggle_executor_subcategory(executor_id, subcategory_id):
+def set_executor_locations(executor_id, location_names):
     conn = db()
 
-    row = conn.execute("""
-        SELECT *
-        FROM executor_subscriptions
+    conn.execute("""
+        DELETE FROM executor_locations
         WHERE executor_id = ?
-          AND subcategory_id = ?
-    """, (
-        executor_id,
-        subcategory_id
-    )).fetchone()
+    """, (executor_id,))
 
-    if row:
-        new_status = 0 if row["is_active"] else 1
+    clean_locations = []
+
+    for location_name in location_names:
+        if not location_name:
+            continue
+
+        name = str(location_name).strip()
+
+        if not name or name in clean_locations:
+            continue
+
+        clean_locations.append(name)
 
         conn.execute("""
-            UPDATE executor_subscriptions
-            SET is_active = ?
-            WHERE executor_id = ?
-              AND subcategory_id = ?
-        """, (
-            new_status,
-            executor_id,
-            subcategory_id
-        ))
-    else:
-        conn.execute("""
-            INSERT OR IGNORE INTO executor_subscriptions(
+            INSERT OR IGNORE INTO executor_locations(
                 executor_id,
-                subcategory_id,
-                is_active,
-                is_paid
+                location_name
             )
-            VALUES (?, ?, 1, 0)
+            VALUES (?, ?)
         """, (
             executor_id,
-            subcategory_id
+            name
+        ))
+
+    if clean_locations:
+        conn.execute("""
+            UPDATE executors
+            SET location_name = ?
+            WHERE tg_id = ?
+        """, (
+            ", ".join(clean_locations),
+            executor_id
         ))
 
     conn.commit()
     conn.close()
 
 
-def get_executor_subscriptions(executor_id):
+def get_executor_locations(executor_id):
     conn = db()
 
     rows = conn.execute("""
-        SELECT
-            executor_subscriptions.*,
-            service_subcategories.name AS subcategory_name,
-            service_categories.name AS category_name,
-            service_categories.emoji AS category_emoji
-        FROM executor_subscriptions
-        JOIN service_subcategories
-            ON service_subcategories.id = executor_subscriptions.subcategory_id
-        JOIN service_categories
-            ON service_categories.id = service_subcategories.category_id
-        WHERE executor_subscriptions.executor_id = ?
-        ORDER BY
-            service_categories.sort_order ASC,
-            service_subcategories.sort_order ASC,
-            service_subcategories.name ASC
+        SELECT *
+        FROM executor_locations
+        WHERE executor_id = ?
+        ORDER BY location_name ASC
     """, (executor_id,)).fetchall()
 
     conn.close()
     return rows
-
-
-
-def toggle_executor_availability(executor_id):
-    conn = db()
-
-    row = conn.execute("""
-        SELECT *
-        FROM executors
-        WHERE tg_id = ?
-    """, (executor_id,)).fetchone()
-
-    if row:
-        new_status = 0 if row["is_available"] else 1
-
-        conn.execute("""
-            UPDATE executors
-            SET is_available = ?
-            WHERE tg_id = ?
-        """, (
-            new_status,
-            executor_id
-        ))
-
-    conn.commit()
-    conn.close()
-
-
-def toggle_executor_active(executor_id):
-    conn = db()
-
-    row = conn.execute("""
-        SELECT *
-        FROM executors
-        WHERE tg_id = ?
-    """, (executor_id,)).fetchone()
-
-    if row:
-        new_status = 0 if row["is_active"] else 1
-
-        conn.execute("""
-            UPDATE executors
-            SET is_active = ?
-            WHERE tg_id = ?
-        """, (
-            new_status,
-            executor_id
-        ))
-
-    conn.commit()
-    conn.close()
-
-
-def delete_executor_subscription(subscription_id):
-    conn = db()
-
-    conn.execute("""
-        DELETE FROM executor_subscriptions
-        WHERE id = ?
-    """, (subscription_id,))
-
-    conn.commit()
-    conn.close()
 
 
 def get_executors_by_subcategory(subcategory_name, public_location=None):
@@ -1965,17 +1502,19 @@ def get_executors_by_subcategory(subcategory_name, public_location=None):
                 ON executor_subscriptions.executor_id = executors.tg_id
             JOIN service_subcategories
                 ON service_subcategories.id = executor_subscriptions.subcategory_id
+            LEFT JOIN executor_locations
+                ON executor_locations.executor_id = executors.tg_id
             WHERE service_subcategories.name = ?
               AND executor_subscriptions.is_active = 1
               AND executors.is_active = 1
               AND COALESCE(executors.is_available, 1) = 1
               AND (
-                    executors.location_name = ?
+                    executor_locations.location_name = ?
+                    OR executors.location_name = ?
                     OR executors.location_name IS NULL
                     OR executors.location_name = ''
                   )
             ORDER BY
-              CASE WHEN executors.location_name = ? THEN 1 ELSE 0 END DESC,
               executors.trust_score DESC,
               executors.rating DESC,
               executors.completed_count DESC
@@ -2004,102 +1543,6 @@ def get_executors_by_subcategory(subcategory_name, public_location=None):
 
     conn.close()
     return rows
-
-
-def get_service_subcategories_flat():
-    conn = db()
-
-    rows = conn.execute("""
-        SELECT
-            service_subcategories.*,
-            service_categories.name AS category_name,
-            service_categories.emoji AS category_emoji
-        FROM service_subcategories
-        JOIN service_categories
-            ON service_categories.id = service_subcategories.category_id
-        WHERE service_categories.is_active = 1
-          AND service_subcategories.is_active = 1
-        ORDER BY
-            service_categories.sort_order ASC,
-            service_subcategories.sort_order ASC,
-            service_subcategories.name ASC
-    """).fetchall()
-
-    conn.close()
-    return rows
-
-
-
-def set_executor_availability(executor_id, is_available):
-    conn = db()
-
-    conn.execute("""
-        UPDATE executors
-        SET is_available = ?
-        WHERE tg_id = ?
-    """, (
-        1 if is_available else 0,
-        executor_id
-    ))
-
-    conn.commit()
-    conn.close()
-
-
-def update_executor_location(executor_id, location_name):
-    conn = db()
-
-    conn.execute("""
-        UPDATE executors
-        SET location_name = ?
-        WHERE tg_id = ?
-    """, (
-        location_name,
-        executor_id
-    ))
-
-    conn.commit()
-    conn.close()
-
-
-def get_executor_profile(executor_id):
-    conn = db()
-
-    executor = conn.execute("""
-        SELECT *
-        FROM executors
-        WHERE tg_id = ?
-    """, (executor_id,)).fetchone()
-
-    if not executor:
-        conn.close()
-        return None
-
-    subscriptions = conn.execute("""
-        SELECT
-            executor_subscriptions.*,
-            service_subcategories.name AS subcategory_name,
-            service_categories.name AS category_name,
-            service_categories.emoji AS category_emoji
-        FROM executor_subscriptions
-        JOIN service_subcategories
-            ON service_subcategories.id = executor_subscriptions.subcategory_id
-        JOIN service_categories
-            ON service_categories.id = service_subcategories.category_id
-        WHERE executor_subscriptions.executor_id = ?
-          AND executor_subscriptions.is_active = 1
-        ORDER BY
-            service_categories.sort_order ASC,
-            service_subcategories.sort_order ASC,
-            service_subcategories.name ASC
-    """, (executor_id,)).fetchall()
-
-    conn.close()
-
-    return {
-        "executor": executor,
-        "subscriptions": subscriptions
-    }
 
 
 def create_service_suggestion(title, description, phone, public_location):

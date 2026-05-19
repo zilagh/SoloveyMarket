@@ -30,26 +30,17 @@ from db import (
     create_dispute,
     resolve_dispute,
     get_executors_with_categories,
+    get_all_service_categories_with_subcategories,
     toggle_executor_category,
     mark_category_paid,
     mark_category_free,
-    toggle_executor_availability,
-    toggle_executor_active,
-    delete_executor_subscription,
     get_events_version,
     get_active_ads,
     get_all_ads,
     create_ad,
     toggle_ad,
     delete_ad,
-
-    seed_default_categories,
-    get_service_categories_with_subcategories,
-    get_all_service_categories_with_subcategories,
-    create_service_category,
-    create_service_subcategory,
-    toggle_service_category,
-    toggle_service_subcategory,
+    set_service_subcategory_requires_dispatcher,
 )
 
 from bot import (
@@ -91,7 +82,6 @@ def admin_auth(credentials: HTTPBasicCredentials = Depends(security)):
 async def lifespan(app: FastAPI):
     init_db()
     seed_default_locations()
-    seed_default_categories()
 
     asyncio.create_task(start_bot())
 
@@ -107,7 +97,6 @@ app = FastAPI(
 @app.get("/")
 async def index(request: Request):
     locations = get_locations()
-    service_categories = get_service_categories_with_subcategories()
     ads_top = get_active_ads("home_top")
     ads_bottom = get_active_ads("home_bottom")
 
@@ -117,8 +106,7 @@ async def index(request: Request):
         {
             "locations": locations,
             "ads_top": ads_top,
-            "ads_bottom": ads_bottom,
-            "service_categories": service_categories
+            "ads_bottom": ads_bottom
         }
     )
 
@@ -126,32 +114,27 @@ async def index(request: Request):
 @app.post("/request")
 async def create_service_request(
     category: str = Form(...),
-    subcategory: str = Form(""),
+    subcategory: str = Form(...),
     description: str = Form(...),
-    public_location: str = Form(""),
-    private_address: str = Form(""),
+    public_location: str = Form(...),
+    private_address: str = Form(...),
     phone: str = Form(...),
     deadline: str = Form("Не срочно")
 ):
-    category = category.strip()
-    subcategory = subcategory.strip() if subcategory else ""
-    public_location = public_location.strip() if public_location else ""
-    private_address = private_address.strip() if private_address else ""
-
     if category == "Предложить услугу":
         title = subcategory or "Предложение новой услуги"
 
         suggestion_description = (
             f"Срок/важность: {deadline}\n\n"
             f"{description}\n\n"
-            f"Ориентир/адрес от пользователя: {private_address or 'не указан'}"
+            f"Адрес/ориентир от пользователя: {private_address}"
         )
 
         create_service_suggestion(
             title=title,
             description=suggestion_description,
             phone=phone,
-            public_location=public_location or "Не указан"
+            public_location=public_location
         )
 
         return RedirectResponse(
@@ -174,8 +157,26 @@ async def create_service_request(
     )
 
     req = get_request(request_id)
+    subcategory_row = get_service_subcategory_by_name(subcategory)
 
-    await notify_admin_new_request(req)
+    requires_dispatcher = 1
+
+    if subcategory_row:
+        requires_dispatcher = subcategory_row["requires_dispatcher"]
+
+    if requires_dispatcher:
+        await notify_admin_new_request(req)
+    else:
+        update_request_status(
+            request_id,
+            "searching_executor",
+            "Автоматическая отправка исполнителям"
+        )
+
+        req = get_request(request_id)
+
+        await notify_admin_new_request(req)
+        await notify_executors_search(req)
 
     return RedirectResponse(
         url="/thanks",
@@ -351,45 +352,6 @@ async def admin_executors(
         {
             "executors": rows
         }
-    )
-
-
-@app.post("/admin/executor/{executor_id}/availability-toggle")
-async def admin_toggle_executor_availability(
-    executor_id: int,
-    _: str = Depends(admin_auth)
-):
-    toggle_executor_availability(executor_id)
-
-    return RedirectResponse(
-        "/admin/executors",
-        status_code=303
-    )
-
-
-@app.post("/admin/executor/{executor_id}/active-toggle")
-async def admin_toggle_executor_active(
-    executor_id: int,
-    _: str = Depends(admin_auth)
-):
-    toggle_executor_active(executor_id)
-
-    return RedirectResponse(
-        "/admin/executors",
-        status_code=303
-    )
-
-
-@app.post("/admin/executor-subscription/{subscription_id}/delete")
-async def admin_delete_executor_subscription(
-    subscription_id: int,
-    _: str = Depends(admin_auth)
-):
-    delete_executor_subscription(subscription_id)
-
-    return RedirectResponse(
-        "/admin/executors",
-        status_code=303
     )
 
 
@@ -652,10 +614,27 @@ async def admin_toggle_subcategory_route(
     )
 
 
+@app.post("/admin/subcategories/{subcategory_id}/dispatcher-toggle")
+async def admin_toggle_subcategory_dispatcher(
+    subcategory_id: int,
+    requires_dispatcher: int = Form(0),
+    _: str = Depends(admin_auth)
+):
+    set_service_subcategory_requires_dispatcher(
+        subcategory_id,
+        requires_dispatcher
+    )
+
+    return RedirectResponse(
+        "/admin/categories",
+        status_code=303
+    )
+
+
 if __name__ == "__main__":
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
         port=8000,
-        reload=False
+        reload=True
     )

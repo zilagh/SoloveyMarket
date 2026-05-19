@@ -201,10 +201,24 @@
                                 <div>
                                     {{ sub.name }}
 
+                                    <span class="badge {% if sub.requires_dispatcher %}off{% else %}active{% endif %}">
+                                        {% if sub.requires_dispatcher %}через диспетчера{% else %}авто{% endif %}
+                                    </span>
+
                                     <span class="badge {% if sub.is_active %}active{% else %}off{% endif %}">
                                         {% if sub.is_active %}активна{% else %}выключена{% endif %}
                                     </span>
                                 </div>
+
+                                <form class="inline" method="post" action="/admin/subcategories/{{ sub.id }}/dispatcher-toggle">
+                                    {% if sub.requires_dispatcher %}
+                                        <input type="hidden" name="requires_dispatcher" value="0">
+                                        <button class="blue" type="submit">сделать авто</button>
+                                    {% else %}
+                                        <input type="hidden" name="requires_dispatcher" value="1">
+                                        <button class="gray" type="submit">через диспетчера</button>
+                                    {% endif %}
+                                </form>
 
                                 <form class="inline" method="post" action="/admin/subcategories/{{ sub.id }}/toggle">
                                     <button class="gray" type="submit">

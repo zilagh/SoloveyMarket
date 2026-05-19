@@ -7,6 +7,7 @@
     <p><b>Точный адрес:</b> {{ r.private_address }}</p>
     <p><b>Телефон:</b> <a href="tel:{{ r.phone }}">{{ r.phone }}</a></p>
     <p><b>Статус:</b> <span class="status">{{ r.status }}</span></p>
+    {% if r.dispatcher_comment and "Автоматическая отправка" in r.dispatcher_comment %}<p class="muted">⚡ Заявка автоматически отправлена исполнителям</p>{% endif %}
     <p><b>Исполнитель:</b> {{ r.executor_id or "не назначен" }}</p>
     {% if r.dispatcher_comment %}<p><b>Комментарий:</b> {{ r.dispatcher_comment }}</p>{% endif %}
     {% if r.assignment_reason %}<p><b>Причина назначения:</b> {{ r.assignment_reason }}</p>{% endif %}

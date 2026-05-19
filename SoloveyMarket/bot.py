@@ -11,7 +11,7 @@ from aiogram.types import (
     InlineKeyboardButton
 )
 
-from config import BOT_TOKEN, ADMIN_ID, FREE_CATEGORY_LIMIT, EXTRA_CATEGORY_PRICE
+from config import BOT_TOKEN, ADMIN_ID
 
 from db import (
     add_executor,
@@ -28,7 +28,8 @@ from db import (
     get_executor,
     get_executor_profile,
     set_executor_availability,
-    update_executor_location,
+    set_executor_locations,
+    get_executor_locations,
 )
 
 
@@ -65,13 +66,13 @@ STATUS_NAMES = {
 
 
 class ExecutorRegisterState(StatesGroup):
-    waiting_location = State()
+    waiting_locations = State()
     waiting_service_category = State()
     waiting_subcategories = State()
 
 
 class ExecutorProfileState(StatesGroup):
-    waiting_new_location = State()
+    waiting_new_locations = State()
     changing_services_category = State()
     changing_services_subcategories = State()
 
@@ -99,25 +100,38 @@ def make_profile_kb():
         keyboard=[
             [KeyboardButton(text="📂 Мои услуги")],
             [KeyboardButton(text="✏️ Изменить услуги")],
+            [KeyboardButton(text="📍 Мои населённые пункты")],
             [KeyboardButton(text="🟢 Принимаю заявки"), KeyboardButton(text="🔴 Не принимаю заявки")],
-            [KeyboardButton(text="📍 Изменить населённый пункт")],
             [KeyboardButton(text="⬅️ Главное меню")],
         ],
         resize_keyboard=True
     )
 
 
-def make_locations_kb():
+def make_locations_multi_kb(selected_locations=None):
+    selected_locations = selected_locations or []
     rows = []
 
     for loc in get_locations():
-        rows.append([KeyboardButton(text=loc["name"])])
+        name = loc["name"]
+        prefix = "✅ " if name in selected_locations else "☐ "
+        rows.append([KeyboardButton(text=f"{prefix}{name}")])
 
+    rows.append([KeyboardButton(text="✅ Завершить выбор")])
     rows.append([KeyboardButton(text="➕ Моего населённого пункта нет")])
 
     return ReplyKeyboardMarkup(
         keyboard=rows,
         resize_keyboard=True
+    )
+
+
+def clean_location_text(text):
+    return (
+        text
+        .replace("✅ ", "")
+        .replace("☐ ", "")
+        .strip()
     )
 
 
@@ -194,9 +208,10 @@ def make_subcategories_kb(category_name, selected_ids=None):
     if category:
         for sub in category["items"]:
             prefix = "✅ " if sub["id"] in selected_ids else "☐ "
+            dispatcher_mark = " 🧑‍💼" if sub["requires_dispatcher"] else ""
             rows.append([
                 KeyboardButton(
-                    text=f"{prefix}{sub['name']}"
+                    text=f"{prefix}{sub['name']}{dispatcher_mark}"
                 )
             ])
 
@@ -214,6 +229,7 @@ def find_subcategory_by_name(category_name, text):
         text
         .replace("✅ ", "")
         .replace("☐ ", "")
+        .replace(" 🧑‍💼", "")
         .strip()
     )
 
@@ -252,10 +268,15 @@ def current_subscription_ids(executor_id):
     return [row["subcategory_id"] for row in profile["subscriptions"]]
 
 
+def current_location_names(executor_id):
+    rows = get_executor_locations(executor_id)
+    return [row["location_name"] for row in rows]
+
+
 @dp.message(CommandStart())
 async def start(message: Message):
     await message.answer(
-        "Здравствуйте! Здесь можно зарегистрироваться исполнителем и получать заявки только по выбранным услугам.",
+        "Здравствуйте! Здесь можно зарегистрироваться исполнителем и получать заявки только по выбранным услугам и населённым пунктам.",
         reply_markup=make_executor_start_kb()
     )
 
@@ -271,36 +292,68 @@ async def back_to_main(message: Message, state: FSMContext):
 
 @dp.message(F.text == "👷 Регистрация исполнителя")
 async def executor_register_start(message: Message, state: FSMContext):
-    await state.set_state(ExecutorRegisterState.waiting_location)
+    await state.set_state(ExecutorRegisterState.waiting_locations)
+    await state.update_data(selected_locations=[])
 
     await message.answer(
-        "Выберите населённый пункт, где вы работаете:",
-        reply_markup=make_locations_kb()
+        "Выберите один или несколько населённых пунктов, где вы работаете.",
+        reply_markup=make_locations_multi_kb([])
     )
 
 
-@dp.message(ExecutorRegisterState.waiting_location)
-async def executor_register_location(message: Message, state: FSMContext):
+@dp.message(ExecutorRegisterState.waiting_locations)
+async def executor_register_locations(message: Message, state: FSMContext):
     if message.text == "➕ Моего населённого пункта нет":
         await state.clear()
         await new_location_start(message, state)
         return
 
-    await state.update_data(
-        location_name=message.text,
-        selected_subcategory_ids=[],
-        current_category=None,
-        edit_mode=False
-    )
+    data = await state.get_data()
+    selected_locations = data.get("selected_locations", [])
 
-    await state.set_state(ExecutorRegisterState.waiting_service_category)
+    if message.text == "✅ Завершить выбор":
+        if not selected_locations:
+            await message.answer(
+                "Выберите хотя бы один населённый пункт.",
+                reply_markup=make_locations_multi_kb(selected_locations)
+            )
+            return
+
+        await state.update_data(
+            selected_subcategory_ids=[],
+            current_category=None
+        )
+
+        await state.set_state(ExecutorRegisterState.waiting_service_category)
+
+        await message.answer(
+            "Теперь выберите раздел услуг.\n\n"
+            "Услуги можно выбирать без лимита. Обычные заявки будут приходить автоматически. "
+            "Крупные денежные заявки отмечены значком 🧑‍💼 и проходят через диспетчера.",
+            reply_markup=make_service_categories_kb([])
+        )
+        return
+
+    location_name = clean_location_text(message.text)
+    valid_locations = [loc["name"] for loc in get_locations()]
+
+    if location_name not in valid_locations:
+        await message.answer(
+            "Выберите населённый пункт кнопкой ниже.",
+            reply_markup=make_locations_multi_kb(selected_locations)
+        )
+        return
+
+    if location_name in selected_locations:
+        selected_locations.remove(location_name)
+    else:
+        selected_locations.append(location_name)
+
+    await state.update_data(selected_locations=selected_locations)
 
     await message.answer(
-        f"Теперь выберите раздел услуг.\n\n"
-        f"После выбора раздела отметьте конкретные услуги, по которым хотите получать заявки.\n\n"
-        f"Первые {FREE_CATEGORY_LIMIT} услуги — бесплатно.\n"
-        f"{FREE_CATEGORY_LIMIT + 1}-я и далее — {EXTRA_CATEGORY_PRICE} ₽/мес за каждую.",
-        reply_markup=make_service_categories_kb([])
+        f"Выбрано населённых пунктов: {len(selected_locations)}",
+        reply_markup=make_locations_multi_kb(selected_locations)
     )
 
 
@@ -338,12 +391,11 @@ async def executor_register_subcategories(message: Message, state: FSMContext):
         message=message,
         state=state,
         category_state=ExecutorRegisterState.waiting_service_category,
-        subcategory_state=ExecutorRegisterState.waiting_subcategories,
         finish_func=finish_executor_registration
     )
 
 
-async def handle_subcategory_selection(message: Message, state: FSMContext, category_state, subcategory_state, finish_func):
+async def handle_subcategory_selection(message: Message, state: FSMContext, category_state, finish_func):
     data = await state.get_data()
     selected_ids = data.get("selected_subcategory_ids", [])
     current_category = data.get("current_category")
@@ -378,18 +430,8 @@ async def handle_subcategory_selection(message: Message, state: FSMContext, cate
 
     await state.update_data(selected_subcategory_ids=selected_ids)
 
-    paid_count = max(0, len(selected_ids) - FREE_CATEGORY_LIMIT)
-
-    info = (
-        f"Выбрано услуг: {len(selected_ids)}\n"
-        f"Бесплатно: до {FREE_CATEGORY_LIMIT}\n"
-    )
-
-    if paid_count:
-        info += f"Платных услуг: {paid_count} × {EXTRA_CATEGORY_PRICE} ₽/мес\n"
-
     await message.answer(
-        info,
+        f"Выбрано услуг: {len(selected_ids)}\nОграничений по количеству услуг нет.",
         reply_markup=make_subcategories_kb(current_category, selected_ids)
     )
 
@@ -397,6 +439,15 @@ async def handle_subcategory_selection(message: Message, state: FSMContext, cate
 async def finish_executor_registration(message: Message, state: FSMContext):
     data = await state.get_data()
     selected_ids = data.get("selected_subcategory_ids", [])
+    selected_locations = data.get("selected_locations", [])
+
+    if not selected_locations:
+        await message.answer(
+            "Выберите хотя бы один населённый пункт.",
+            reply_markup=make_locations_multi_kb(selected_locations)
+        )
+        await state.set_state(ExecutorRegisterState.waiting_locations)
+        return
 
     if not selected_ids:
         await message.answer(
@@ -406,7 +457,6 @@ async def finish_executor_registration(message: Message, state: FSMContext):
         await state.set_state(ExecutorRegisterState.waiting_service_category)
         return
 
-    location_name = data.get("location_name")
     selected_names = selected_services_text(selected_ids)
     main_service_name = selected_names[0] if selected_names else "Исполнитель"
 
@@ -414,7 +464,12 @@ async def finish_executor_registration(message: Message, state: FSMContext):
         tg_id=message.from_user.id,
         name=message.from_user.full_name,
         category=main_service_name,
-        location_name=location_name
+        location_name=", ".join(selected_locations)
+    )
+
+    set_executor_locations(
+        executor_id=message.from_user.id,
+        location_names=selected_locations
     )
 
     set_executor_subcategories(
@@ -424,50 +479,29 @@ async def finish_executor_registration(message: Message, state: FSMContext):
 
     await send_registration_result(
         message=message,
-        selected_ids=selected_ids,
         selected_names=selected_names,
-        location_name=location_name
+        selected_locations=selected_locations
     )
 
     await state.clear()
 
 
-async def send_registration_result(message: Message, selected_ids, selected_names, location_name):
-    paid_count = max(0, len(selected_ids) - FREE_CATEGORY_LIMIT)
-    paid_sum = paid_count * EXTRA_CATEGORY_PRICE
-
+async def send_registration_result(message: Message, selected_names, selected_locations):
     result = (
         f"✅ Готово.\n\n"
-        f"📍 Населённый пункт: {location_name}\n"
-        f"🔔 Вы будете получать заявки только по выбранным услугам.\n\n"
+        f"📍 Населённые пункты:\n"
+    )
+
+    for name in selected_locations:
+        result += f"— {name}\n"
+
+    result += (
+        f"\n🔔 Вы будете получать заявки только по выбранным услугам и населённым пунктам.\n\n"
         f"📂 Услуги:\n"
     )
 
-    for i, name in enumerate(selected_names, start=1):
-        if i <= FREE_CATEGORY_LIMIT:
-            result += f"— {name} бесплатно\n"
-        else:
-            result += f"— {name} платно\n"
-
-    if paid_count:
-        result += (
-            f"\n💳 Платных услуг: {paid_count}\n"
-            f"К оплате: {paid_sum} ₽/мес\n\n"
-            f"Пока платные услуги активируются диспетчером вручную."
-        )
-
-        if ADMIN_ID:
-            await safe_send_message(
-                ADMIN_ID,
-                f"💳 Исполнитель выбрал платные услуги\n\n"
-                f"👷 {message.from_user.full_name}\n"
-                f"🆔 TG ID: {message.from_user.id}\n"
-                f"📍 {location_name}\n"
-                f"📂 Всего услуг: {len(selected_ids)}\n"
-                f"💰 К оплате: {paid_sum} ₽/мес"
-            )
-    else:
-        result += "\nВсе выбранные услуги подключены бесплатно."
+    for name in selected_names:
+        result += f"— {name}\n"
 
     await message.answer(result, reply_markup=make_executor_start_kb())
 
@@ -485,13 +519,13 @@ async def executor_profile(message: Message):
 
     executor = profile["executor"]
     subscriptions = profile["subscriptions"]
+    locations = profile.get("locations", [])
 
     status = "🟢 принимает заявки" if executor["is_available"] else "🔴 не принимает заявки"
 
     text = (
         f"👤 Мой профиль\n\n"
         f"👷 Имя: {executor['name']}\n"
-        f"📍 Населённый пункт: {executor['location_name'] or 'не указан'}\n"
         f"🔔 Статус: {status}\n"
         f"⭐ Рейтинг: {executor['rating']}\n"
         f"✅ Выполнено: {executor['completed_count']}\n"
@@ -499,6 +533,7 @@ async def executor_profile(message: Message):
         f"⚠️ Жалоб: {executor['complaint_count']}\n"
         f"💬 Откликов: {executor['response_count']}\n"
         f"🤝 Доверие: {executor['trust_score']}\n"
+        f"📍 Населённых пунктов: {len(locations)}\n"
         f"📂 Услуг подключено: {len(subscriptions)}"
     )
 
@@ -525,16 +560,90 @@ async def executor_my_services(message: Message):
     text = "📂 Ваши услуги:\n\n"
 
     for i, sub in enumerate(subscriptions, start=1):
-        paid_text = "платно" if sub["is_paid"] else "бесплатно"
+        dispatcher_text = "через диспетчера" if sub["requires_dispatcher"] else "авто"
         text += (
             f"{i}. {sub['category_emoji']} "
             f"{sub['category_name']} → {sub['subcategory_name']} "
-            f"({paid_text})\n"
+            f"({dispatcher_text})\n"
         )
 
     await message.answer(
         text,
         reply_markup=make_profile_kb()
+    )
+
+
+@dp.message(F.text == "📍 Мои населённые пункты")
+@dp.message(F.text == "📍 Изменить населённый пункт")
+async def executor_edit_locations_start(message: Message, state: FSMContext):
+    if not get_executor(message.from_user.id):
+        await message.answer("Сначала зарегистрируйтесь как исполнитель.")
+        return
+
+    selected_locations = current_location_names(message.from_user.id)
+
+    await state.update_data(selected_locations=selected_locations)
+    await state.set_state(ExecutorProfileState.waiting_new_locations)
+
+    await message.answer(
+        "Отметьте населённые пункты, где вы готовы работать.",
+        reply_markup=make_locations_multi_kb(selected_locations)
+    )
+
+
+@dp.message(ExecutorProfileState.waiting_new_locations)
+async def executor_edit_locations_finish(message: Message, state: FSMContext):
+    if message.text == "➕ Моего населённого пункта нет":
+        await state.clear()
+        await new_location_start(message, state)
+        return
+
+    data = await state.get_data()
+    selected_locations = data.get("selected_locations", [])
+
+    if message.text == "✅ Завершить выбор":
+        if not selected_locations:
+            await message.answer(
+                "Нужно оставить хотя бы один населённый пункт.",
+                reply_markup=make_locations_multi_kb(selected_locations)
+            )
+            return
+
+        set_executor_locations(
+            executor_id=message.from_user.id,
+            location_names=selected_locations
+        )
+
+        await state.clear()
+
+        text = "📍 Населённые пункты обновлены:\n\n"
+
+        for loc in selected_locations:
+            text += f"— {loc}\n"
+
+        await message.answer(text, reply_markup=make_profile_kb())
+        return
+
+    location_name = clean_location_text(message.text)
+    valid_locations = [loc["name"] for loc in get_locations()]
+
+    if location_name not in valid_locations:
+        await message.answer(
+            "Выберите населённый пункт кнопкой ниже.",
+            reply_markup=make_locations_multi_kb(selected_locations)
+        )
+        return
+
+    if location_name in selected_locations:
+        selected_locations.remove(location_name)
+    else:
+        selected_locations.append(location_name)
+
+    await state.update_data(selected_locations=selected_locations)
+
+    await message.answer(
+        f"Выбрано населённых пунктов: {len(selected_locations)}",
+        reply_markup=make_locations_multi_kb(selected_locations)
     )
 
 
@@ -546,11 +655,9 @@ async def executor_edit_services(message: Message, state: FSMContext):
         await message.answer("Сначала зарегистрируйтесь как исполнитель.")
         return
 
-    executor = profile["executor"]
     selected_ids = current_subscription_ids(message.from_user.id)
 
     await state.update_data(
-        location_name=executor["location_name"],
         selected_subcategory_ids=selected_ids,
         current_category=None
     )
@@ -597,7 +704,6 @@ async def executor_edit_services_subcategories(message: Message, state: FSMConte
         message=message,
         state=state,
         category_state=ExecutorProfileState.changing_services_category,
-        subcategory_state=ExecutorProfileState.changing_services_subcategories,
         finish_func=finish_executor_services_update
     )
 
@@ -605,6 +711,7 @@ async def executor_edit_services_subcategories(message: Message, state: FSMConte
 async def finish_executor_services_update(message: Message, state: FSMContext):
     data = await state.get_data()
     selected_ids = data.get("selected_subcategory_ids", [])
+    selected_locations = current_location_names(message.from_user.id)
 
     if not selected_ids:
         await message.answer(
@@ -620,13 +727,11 @@ async def finish_executor_services_update(message: Message, state: FSMContext):
     )
 
     selected_names = selected_services_text(selected_ids)
-    location_name = data.get("location_name")
 
     await send_registration_result(
         message=message,
-        selected_ids=selected_ids,
         selected_names=selected_names,
-        location_name=location_name
+        selected_locations=selected_locations
     )
 
     await state.clear()
@@ -656,40 +761,6 @@ async def executor_available_off(message: Message):
 
     await message.answer(
         "🔴 Готово. Новые заявки временно не будут приходить.",
-        reply_markup=make_profile_kb()
-    )
-
-
-@dp.message(F.text == "📍 Изменить населённый пункт")
-async def executor_change_location_start(message: Message, state: FSMContext):
-    if not get_executor(message.from_user.id):
-        await message.answer("Сначала зарегистрируйтесь как исполнитель.")
-        return
-
-    await state.set_state(ExecutorProfileState.waiting_new_location)
-
-    await message.answer(
-        "Выберите новый населённый пункт:",
-        reply_markup=make_locations_kb()
-    )
-
-
-@dp.message(ExecutorProfileState.waiting_new_location)
-async def executor_change_location_finish(message: Message, state: FSMContext):
-    if message.text == "➕ Моего населённого пункта нет":
-        await state.clear()
-        await new_location_start(message, state)
-        return
-
-    update_executor_location(
-        executor_id=message.from_user.id,
-        location_name=message.text
-    )
-
-    await state.clear()
-
-    await message.answer(
-        f"📍 Населённый пункт обновлён: {message.text}",
         reply_markup=make_profile_kb()
     )
 
@@ -824,7 +895,7 @@ async def notify_executors_search(req):
                 f"Подкатегория: {subcategory}\n"
                 f"Ориентир: {req['public_location']}"
             )
-        return
+        return 0
 
     text = (
         f"👷 Нужен исполнитель\n\n"
@@ -851,15 +922,14 @@ async def notify_executors_search(req):
     sent = 0
 
     for executor in executors:
-        try:
-            await safe_send_message(
-                executor["tg_id"],
-                text,
-                reply_markup=kb
-            )
+        result = await safe_send_message(
+            executor["tg_id"],
+            text,
+            reply_markup=kb
+        )
+
+        if result:
             sent += 1
-        except Exception:
-            pass
 
     if ADMIN_ID:
         await safe_send_message(
@@ -870,6 +940,8 @@ async def notify_executors_search(req):
             f"Ориентир: {req['public_location']}\n"
             f"Отправлено: {sent}"
         )
+
+    return sent
 
 
 @dp.callback_query(F.data.startswith("executor_response:"))
@@ -994,15 +1066,12 @@ async def executor_problem_callback(callback):
 
 async def notify_location_approved(req):
     if req and req["executor_tg_id"]:
-        try:
-            await safe_send_message(
-                req["executor_tg_id"],
-                f"✅ Населённый пункт добавлен в систему:\n\n"
-                f"🏘 {req['location_name']}\n"
-                f"Теперь можно зарегистрироваться исполнителем в этом населённом пункте."
-            )
-        except Exception:
-            pass
+        await safe_send_message(
+            req["executor_tg_id"],
+            f"✅ Населённый пункт добавлен в систему:\n\n"
+            f"🏘 {req['location_name']}\n"
+            f"Теперь можно зарегистрироваться исполнителем в этом населённом пункте."
+        )
 
 
 async def start_bot():
