@@ -789,6 +789,107 @@ def get_all_service_categories_with_subcategories():
     conn.close()
     return result
 
+def get_service_categories_with_subcategories():
+    conn = db()
+
+    categories = conn.execute("""
+        SELECT *
+        FROM service_categories
+        WHERE is_active = 1
+        ORDER BY sort_order ASC, name ASC
+    """).fetchall()
+
+    result = []
+
+    for category in categories:
+        subcategories = conn.execute("""
+            SELECT *
+            FROM service_subcategories
+            WHERE category_id = ?
+              AND is_active = 1
+            ORDER BY sort_order ASC, name ASC
+        """, (category["id"],)).fetchall()
+
+        result.append({
+            "category": category,
+            "subcategories": subcategories
+        })
+
+    conn.close()
+
+    return result
+
+def create_service_category(name, emoji="📌", sort_order=100):
+    conn = db()
+
+    conn.execute("""
+        INSERT INTO service_categories(
+            name,
+            emoji,
+            sort_order
+        )
+        VALUES (?, ?, ?)
+    """, (
+        name,
+        emoji,
+        sort_order
+    ))
+
+    conn.commit()
+    conn.close()
+
+
+def create_service_subcategory(category_id, name, sort_order=100):
+    conn = db()
+
+    conn.execute("""
+        INSERT INTO service_subcategories(
+            category_id,
+            name,
+            sort_order
+        )
+        VALUES (?, ?, ?)
+    """, (
+        category_id,
+        name,
+        sort_order
+    ))
+
+    conn.commit()
+    conn.close()
+
+
+def toggle_service_category(category_id):
+    conn = db()
+
+    conn.execute("""
+        UPDATE service_categories
+        SET is_active = CASE
+            WHEN is_active = 1 THEN 0
+            ELSE 1
+        END
+        WHERE id = ?
+    """, (category_id,))
+
+    conn.commit()
+    conn.close()
+
+
+def toggle_service_subcategory(subcategory_id):
+    conn = db()
+
+    conn.execute("""
+        UPDATE service_subcategories
+        SET is_active = CASE
+            WHEN is_active = 1 THEN 0
+            ELSE 1
+        END
+        WHERE id = ?
+    """, (subcategory_id,))
+
+    conn.commit()
+    conn.close()
+
 def create_response(request_id, executor_id):
     conn = db()
 

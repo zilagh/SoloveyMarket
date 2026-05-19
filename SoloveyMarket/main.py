@@ -30,7 +30,14 @@ from db import (
     create_dispute,
     resolve_dispute,
     get_executors_with_categories,
+
     get_all_service_categories_with_subcategories,
+    get_service_categories_with_subcategories,
+    create_service_category,
+    create_service_subcategory,
+    toggle_service_category,
+    toggle_service_subcategory,
+
     toggle_executor_category,
     mark_category_paid,
     mark_category_free,
@@ -41,6 +48,7 @@ from db import (
     toggle_ad,
     delete_ad,
     set_service_subcategory_requires_dispatcher,
+    get_service_subcategory_by_name,
 )
 
 from bot import (
@@ -97,6 +105,7 @@ app = FastAPI(
 @app.get("/")
 async def index(request: Request):
     locations = get_locations()
+    service_categories = get_service_categories_with_subcategories()
     ads_top = get_active_ads("home_top")
     ads_bottom = get_active_ads("home_bottom")
 
@@ -105,6 +114,7 @@ async def index(request: Request):
         "index.html",
         {
             "locations": locations,
+            "service_categories": service_categories,
             "ads_top": ads_top,
             "ads_bottom": ads_bottom
         }
@@ -636,5 +646,5 @@ if __name__ == "__main__":
         "main:app",
         host="0.0.0.0",
         port=8000,
-        reload=True
+        reload=False
     )
